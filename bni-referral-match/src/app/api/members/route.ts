@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMembers, updateMember } from "@/lib/db";
+import { getFilledCount, getMembers, updateMember } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const members = await getMembers();
-  return NextResponse.json({ members });
+  const [members, filled] = await Promise.all([getMembers(), getFilledCount()]);
+  return NextResponse.json({ members, filled });
 }
 
 export async function PUT(req: NextRequest) {

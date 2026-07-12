@@ -80,6 +80,16 @@ function CardEditor() {
 
   const section = SECTIONS[active];
 
+  // 目前已填卡人數（第四部分顯示）
+  const [filled, setFilled] = useState<{ total: number; real: number; demo: number } | null>(null);
+  useEffect(() => {
+    if (section.id !== "s4" || filled !== null) return;
+    fetch("/api/members")
+      .then((r) => r.json())
+      .then((d) => setFilled(d.filled ?? null))
+      .catch(() => {});
+  }, [section.id, filled]);
+
   // 進入第五部分（30 天行動計畫）前，先給 AI 媒合結果與提案建議
   const [recs, setRecs] = useState<MatchRec[] | null>(null);
   useEffect(() => {
@@ -174,6 +184,21 @@ function CardEditor() {
           })}
         </div>
 
+        {/* 第四部分：目前已填卡人數 */}
+        {section.id === "s4" && filled && (
+          <div className="glass animate-fade-up flex flex-wrap items-center gap-3 p-5">
+            <span className="text-2xl">📊</span>
+            <p className="text-sm text-ink">
+              目前已填卡人數：<strong className="text-bni-red">{filled.total} 位</strong>
+              {filled.demo > 0 && (
+                <span className="ml-1 text-xs text-ink-muted">
+                  （含範例人物 {filled.demo} 位，真實會員填卡超過 5 人後範例將自動移除）
+                </span>
+              )}
+            </p>
+          </div>
+        )}
+
         {/* 第五部分前：AI 媒合結果＋提案建議 */}
         {section.id === "s5" && (
           <div className="glass animate-fade-up p-7">
@@ -201,6 +226,9 @@ function CardEditor() {
                     <div className="flex flex-wrap items-center gap-3">
                       <div className="min-w-0 flex-1">
                         <span className="font-bold text-ink">{r.target.name}</span>
+                        {r.target.isDemo && (
+                          <span className="ml-1 text-xs text-amber-600">（範例）</span>
+                        )}
                         <span className="ml-2 text-xs text-ink-muted">
                           {r.target.company} · {r.target.industry}
                         </span>

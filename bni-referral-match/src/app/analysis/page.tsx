@@ -69,7 +69,10 @@ export default function AnalysisPage() {
                         <Avatar name={e.member.name} color={e.member.color} size={36} />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-sm font-semibold text-ink">{e.member.name}</span>
+                            <span className="text-sm font-semibold text-ink">
+                              {e.member.name}
+                              {e.member.isDemo && <span className="ml-1 text-xs font-normal text-amber-600">（範例）</span>}
+                            </span>
                             <span className="shrink-0 text-xs font-bold text-gold-600">
                               {Math.min(97, e.score)} 分
                             </span>

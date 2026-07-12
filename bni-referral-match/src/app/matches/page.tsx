@@ -102,7 +102,10 @@ export default function MatchesPage() {
               <div className="flex items-center gap-4">
                 <Avatar name={m.target.name} color={m.target.color} size={52} />
                 <div className="min-w-0 flex-1">
-                  <div className="font-bold text-ink">{m.target.name}</div>
+                  <div className="font-bold text-ink">
+                    {m.target.name}
+                    {m.target.isDemo && <span className="ml-1 text-xs font-normal text-amber-600">（範例）</span>}
+                  </div>
                   <div className="truncate text-xs text-ink-muted">
                     {m.target.company} · {m.target.industry} · {m.target.chapter}
                   </div>

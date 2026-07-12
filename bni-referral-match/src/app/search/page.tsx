@@ -123,6 +123,7 @@ export default function SearchPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-ink">{m.name}</span>
+                    {m.isDemo && <span className="text-xs text-amber-600">（範例）</span>}
                     <span className="tag-gold">{m.industry}</span>
                     <span className="rounded-full bg-ink/5 px-2.5 py-1 text-xs text-ink-soft">{m.chapter}</span>
                     {hitField && hitField !== "姓名" && (

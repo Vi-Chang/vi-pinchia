@@ -240,7 +240,10 @@ export default function PlazaPage() {
                   <div className="flex items-center gap-2">
                     <Avatar name={r.target.name} color={r.target.color} size={34} />
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-bold text-ink">{r.target.name}</div>
+                      <div className="truncate text-sm font-bold text-ink">
+                        {r.target.name}
+                        {r.target.isDemo && <span className="ml-1 text-[10px] font-normal text-amber-600">（範例）</span>}
+                      </div>
                       <div className="truncate text-[11px] text-ink-muted">{r.target.industry}</div>
                     </div>
                     <span className="ml-auto text-sm font-bold text-bni-red">{r.probability}%</span>
@@ -268,7 +271,10 @@ export default function PlazaPage() {
                 <div className="flex items-center gap-3">
                   <Avatar name={o.member.name} color={o.member.color} size={44} />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold text-ink">{o.member.name}</div>
+                    <div className="text-sm font-bold text-ink">
+                      {o.member.name}
+                      {o.member.isDemo && <span className="ml-1 text-xs font-normal text-amber-600">（範例）</span>}
+                    </div>
                     <div className="truncate text-xs text-ink-muted">
                       {o.member.chapter} · {o.member.industry}
                     </div>

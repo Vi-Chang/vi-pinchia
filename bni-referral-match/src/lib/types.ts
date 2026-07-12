@@ -25,6 +25,8 @@ export interface Member {
   media: Partial<Record<MediaKind, string[]>>;
   /** 是否已完成首次登入的 AI 商機資料引導 */
   onboarded?: boolean;
+  /** 範例人物：名字旁標註（範例），真實填卡人數超過 5 人時自動移除 */
+  isDemo?: boolean;
 }
 
 /** 商機廣場：會員發布的開放合作 */

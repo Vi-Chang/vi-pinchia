@@ -156,7 +156,10 @@ function seedOpportunities(): Opportunity[] {
 function demoStore(): Store {
   if (!globalThis.__brmStore) {
     const members = structuredClone(DEMO_MEMBERS);
-    for (const m of members) m.onboarded = true; // 示範會員已有完整交流卡
+    for (const m of members) {
+      m.onboarded = true; // 示範會員已有完整交流卡
+      m.isDemo = true; // 範例人物：真實填卡人數超過 5 人時自動移除
+    }
     const accounts = members.map((m) => {
       const salt = randomBytes(8).toString("hex");
       return { email: m.email.toLowerCase(), memberId: m.id, salt, passwordHash: hashPassword(DEMO_PASSWORD, salt) };
@@ -181,6 +184,40 @@ function demoStore(): Store {
     };
   }
   return globalThis.__brmStore;
+}
+
+/** 已填卡人數：擁有至少一題答案的會員數 */
+export async function getFilledCount(): Promise<{ total: number; real: number; demo: number }> {
+  const store = demoStore();
+  const filledIds = new Set(
+    store.versions.filter((v) => Object.keys(v.answers).length > 0).map((v) => v.memberId)
+  );
+  let real = 0;
+  let demo = 0;
+  for (const m of store.members) {
+    if (!filledIds.has(m.id)) continue;
+    if (m.isDemo) demo++;
+    else real++;
+  }
+  return { total: real + demo, real, demo };
+}
+
+/** 真實會員填卡超過 5 人 → 自動刪除所有範例人物與其資料 */
+async function purgeDemoIfReady(): Promise<void> {
+  const store = demoStore();
+  const { real } = await getFilledCount();
+  if (real <= 5) return;
+  const demoIds = new Set(store.members.filter((m) => m.isDemo).map((m) => m.id));
+  if (demoIds.size === 0) return;
+  store.members = store.members.filter((m) => !demoIds.has(m.id));
+  store.accounts = store.accounts.filter((a) => !demoIds.has(a.memberId));
+  store.versions = store.versions.filter((v) => !demoIds.has(v.memberId));
+  store.projects = store.projects.filter((p) => !demoIds.has(p.memberId));
+  store.opportunities = store.opportunities.filter((o) => !demoIds.has(o.memberId));
+  store.interactions = store.interactions.filter(
+    (i) => !demoIds.has(i.fromId) && !demoIds.has(i.toId)
+  );
+  store.alerts = store.alerts.filter((a) => !a.memberIds.some((id) => demoIds.has(id)));
 }
 
 export function hasSupabase(): boolean {
@@ -288,6 +325,8 @@ export async function saveCard(
   target.answers = answers;
   target.updatedAt = card.updatedAt;
   target.updatedBy = who;
+  // 真實填卡人數超過 5 人 → 自動移除範例人物
+  await purgeDemoIfReady();
   // 交流卡更新 → AI 立即重新計算媒合
   await recomputeAlerts(memberId, `${who}更新了交流卡`);
   return { memberId, answers, updatedAt: target.updatedAt };
