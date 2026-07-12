@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { SiteFooter } from "@/components/ui/SiteFooter";
@@ -14,6 +14,11 @@ export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
+
+  // 切換步驟時捲回頂端，從第一個欄位開始填
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
   const [a, setA] = useState<Record<string, Answer>>({
     ob_specialty: "",
     ob_services: "",

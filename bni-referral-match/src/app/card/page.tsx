@@ -70,6 +70,11 @@ function CardEditor() {
 
   const set = (id: string, v: Answer) => setAnswers((prev) => ({ ...prev, [id]: v }));
 
+  // 切換章節時捲回頁面頂端，從第一題開始填
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [active]);
+
   const section = SECTIONS[active];
 
   const sectionDone = useMemo(
