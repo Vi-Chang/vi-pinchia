@@ -310,6 +310,111 @@
 
   .gallery a:hover img { transform: scale(1.06); }
 
+  .guestbook-form {
+    display: grid;
+    gap: 12px;
+    background: var(--bg);
+    padding: 22px 24px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+
+  .guestbook-form input,
+  .guestbook-form textarea {
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid #eeddd0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    outline: none;
+    resize: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .guestbook-form input:focus,
+  .guestbook-form textarea:focus {
+    border-color: var(--accent);
+  }
+
+  .guestbook-form button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    background: linear-gradient(135deg, #e08b5f, #c96f42);
+    border: none;
+    border-radius: 999px;
+    padding: 12px 0;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .guestbook-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(201, 111, 66, 0.3);
+  }
+
+  .guestbook-form button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+    transform: none;
+  }
+
+  .gb-status {
+    font-size: 13px;
+    color: var(--accent-deep);
+    text-align: center;
+    min-height: 20px;
+  }
+
+  .gb-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .gb-item {
+    background: var(--bg);
+    padding: 16px 20px;
+    border-radius: 14px;
+    border-left: 4px solid var(--accent);
+  }
+
+  .gb-item .gb-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .gb-item .gb-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .gb-item .gb-time {
+    font-size: 12px;
+    color: var(--text-soft);
+    white-space: nowrap;
+  }
+
+  .gb-item .gb-msg {
+    margin-top: 4px;
+    font-size: 14px;
+    color: var(--text-soft);
+    word-break: break-word;
+  }
+
+  .gb-empty {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-soft);
+    padding: 10px 0;
+  }
+
   .footer {
     text-align: center;
     padding: 24px;
@@ -423,9 +528,106 @@
         <img class="qr" src="QR.jpg" alt="張婕 LINE QR Code">
         <p class="qr-hint">開啟 LINE 掃描上方 QR Code 加我好友</p>
       </div>
+
+      <p class="section-title" style="margin-top: 36px;">訪客留言板</p>
+      <form class="guestbook-form" id="gbForm">
+        <input type="text" id="gbName" maxlength="30" placeholder="你的名字" required>
+        <textarea id="gbMsg" rows="3" maxlength="200" placeholder="留一句話給我吧！" required></textarea>
+        <button type="submit" id="gbSubmit">送出留言</button>
+        <p class="gb-status" id="gbStatus"></p>
+      </form>
+      <div class="gb-list" id="gbList">
+        <p class="gb-empty">留言載入中⋯</p>
+      </div>
     </section>
 
     <footer class="footer">© 2026 張婕 · 品嘉牙體技術所</footer>
   </main>
+
+<script>
+(function () {
+  const form = document.getElementById('gbForm');
+  const nameInput = document.getElementById('gbName');
+  const msgInput = document.getElementById('gbMsg');
+  const submitBtn = document.getElementById('gbSubmit');
+  const statusEl = document.getElementById('gbStatus');
+  const listEl = document.getElementById('gbList');
+
+  function render(messages) {
+    listEl.innerHTML = '';
+    if (!messages.length) {
+      const empty = document.createElement('p');
+      empty.className = 'gb-empty';
+      empty.textContent = '還沒有留言，來當第一個吧！';
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const m of messages) {
+      const item = document.createElement('div');
+      item.className = 'gb-item';
+
+      const head = document.createElement('div');
+      head.className = 'gb-head';
+
+      const name = document.createElement('span');
+      name.className = 'gb-name';
+      name.textContent = m.name;
+
+      const time = document.createElement('span');
+      time.className = 'gb-time';
+      time.textContent = (m.created_at || '').slice(0, 16);
+
+      const msg = document.createElement('p');
+      msg.className = 'gb-msg';
+      msg.textContent = m.message;
+
+      head.appendChild(name);
+      head.appendChild(time);
+      item.appendChild(head);
+      item.appendChild(msg);
+      listEl.appendChild(item);
+    }
+  }
+
+  async function load() {
+    try {
+      const res = await fetch('/api/messages');
+      if (!res.ok) throw new Error();
+      render(await res.json());
+    } catch {
+      listEl.innerHTML = '';
+      const err = document.createElement('p');
+      err.className = 'gb-empty';
+      err.textContent = '留言載入失敗，請稍後再試。';
+      listEl.appendChild(err);
+    }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    statusEl.textContent = '送出中⋯';
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: nameInput.value, message: msgInput.value })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '送出失敗');
+      msgInput.value = '';
+      statusEl.textContent = '留言成功！';
+      await load();
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } catch (err) {
+      statusEl.textContent = err.message || '送出失敗，請稍後再試。';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  load();
+})();
+</script>
 </body>
 </html>
