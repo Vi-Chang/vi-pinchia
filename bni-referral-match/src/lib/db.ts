@@ -116,6 +116,24 @@ function hashPassword(password: string, salt: string): string {
 /** 示範會員帳號的預設密碼 */
 const DEMO_PASSWORD = "demo1234";
 
+/** 平台管理員（僅此帳號可刪除其他會員的資訊） */
+const ADMIN_MEMBER: Member = {
+  id: "admin-vi",
+  name: "張婕",
+  company: "品嘉牙體技術所",
+  industry: "醫療健康",
+  chapter: "長城鈦金分會",
+  title: "總監",
+  phone: "0966-305619",
+  line: "",
+  email: "pinchia8860@gmail.com",
+  role: "admin",
+  color: "#c8102e",
+  media: {},
+  onboarded: true,
+};
+const ADMIN_PASSWORD = "3345678";
+
 function seedOpportunities(): Opportunity[] {
   const mk = (
     id: string,
@@ -125,7 +143,7 @@ function seedOpportunities(): Opportunity[] {
     type: string,
     status: OpportunityStatus,
     createdAt: string
-  ): Opportunity => ({ id, memberId, title, content, type, status, createdAt, updatedAt: createdAt });
+  ): Opportunity => ({ id, memberId, title, content, type, status, createdAt, updatedAt: createdAt, isTemplate: true });
   return [
     mk("op1", "m1", "復健診所整廠設備合作", "尋找室內設計與財稅夥伴，一起服務新開業復健診所；提供設備展示中心作為共同提案場地。", "轉介客戶", "open", "2026-07-01T08:00:00Z"),
     mk("op2", "m3", "醫療空間聯合提案", "醫療空間全案設計，徵醫療設備、建築營造夥伴聯合投標診所新建案。", "資源共享", "open", "2026-07-05T08:00:00Z"),
@@ -139,16 +157,26 @@ function demoStore(): Store {
   if (!globalThis.__brmStore) {
     const members = structuredClone(DEMO_MEMBERS);
     for (const m of members) m.onboarded = true; // 示範會員已有完整交流卡
+    const accounts = members.map((m) => {
+      const salt = randomBytes(8).toString("hex");
+      return { email: m.email.toLowerCase(), memberId: m.id, salt, passwordHash: hashPassword(DEMO_PASSWORD, salt) };
+    });
+    // 管理員帳號（張婕）
+    members.push(structuredClone(ADMIN_MEMBER));
+    const adminSalt = randomBytes(8).toString("hex");
+    accounts.push({
+      email: ADMIN_MEMBER.email.toLowerCase(),
+      memberId: ADMIN_MEMBER.id,
+      salt: adminSalt,
+      passwordHash: hashPassword(ADMIN_PASSWORD, adminSalt),
+    });
     globalThis.__brmStore = {
       members,
       interactions: structuredClone(DEMO_INTERACTIONS),
       versions: seedVersions(members),
       projects: structuredClone(DEMO_PROJECTS),
       alerts: [],
-      accounts: members.map((m) => {
-        const salt = randomBytes(8).toString("hex");
-        return { email: m.email.toLowerCase(), memberId: m.id, salt, passwordHash: hashPassword(DEMO_PASSWORD, salt) };
-      }),
+      accounts,
       opportunities: seedOpportunities(),
     };
   }
@@ -666,12 +694,22 @@ export async function setOpportunityStatus(id: string, status: OpportunityStatus
   return o;
 }
 
-export async function deleteOpportunity(id: string): Promise<boolean> {
+/** 刪除合作：僅發布者本人或管理員可刪除 */
+export async function deleteOpportunity(
+  id: string,
+  requesterId: string
+): Promise<{ ok: boolean; error?: string }> {
   const store = demoStore();
   const idx = store.opportunities.findIndex((o) => o.id === id);
-  if (idx < 0) return false;
+  if (idx < 0) return { ok: false, error: "找不到這筆合作" };
+  const requester = store.members.find((m) => m.id === requesterId);
+  const isOwner = store.opportunities[idx].memberId === requesterId;
+  const isAdmin = requester?.role === "admin";
+  if (!isOwner && !isAdmin) {
+    return { ok: false, error: "只有發布者本人或管理員可以刪除" };
+  }
   store.opportunities.splice(idx, 1);
-  return true;
+  return { ok: true };
 }
 
 /** 我要合作：通知商機發布者 */

@@ -116,8 +116,10 @@ export default function PlazaPage() {
   };
 
   const remove = async (o: Opp) => {
-    if (!confirm(`確定要刪除「${o.title}」嗎？`)) return;
-    await fetch(`/api/plaza?id=${o.id}`, { method: "DELETE" });
+    const label = o.isTemplate ? `範本「${o.title}」` : `「${o.title}」`;
+    if (!confirm(`確定要刪除${label}嗎？`)) return;
+    const res = await fetch(`/api/plaza?id=${o.id}&memberId=${member!.id}`, { method: "DELETE" });
+    if (!res.ok) flash((await res.json()).error || "刪除失敗");
     await load();
   };
 
@@ -259,6 +261,7 @@ export default function PlazaPage() {
           )}
           {list.map((o) => {
             const isMine = o.memberId === member.id;
+            const isAdmin = member.role === "admin";
             const open = o.status === "open";
             return (
               <div key={o.id} className={`glass glass-hover flex flex-col p-6 ${!open ? "opacity-70" : ""}`}>
@@ -270,6 +273,11 @@ export default function PlazaPage() {
                       {o.member.chapter} · {o.member.industry}
                     </div>
                   </div>
+                  {o.isTemplate && (
+                    <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
+                      範本
+                    </span>
+                  )}
                   <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${open ? "bg-emerald-100 text-emerald-700" : "bg-ink/10 text-ink-soft"}`}>
                     {open ? "開放中" : "已結束"}
                   </span>
@@ -308,6 +316,11 @@ export default function PlazaPage() {
                       <button onClick={() => toggleFav(o.id)} className={`chip ${favs.includes(o.id) ? "chip-on" : ""}`}>
                         {favs.includes(o.id) ? "⭐ 已收藏" : "☆ 收藏"}
                       </button>
+                      {isAdmin && (
+                        <button onClick={() => remove(o)} className="chip !text-bni-red" title="管理員刪除">
+                          🗑️ 刪除
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

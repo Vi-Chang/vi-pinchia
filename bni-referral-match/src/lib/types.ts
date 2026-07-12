@@ -39,6 +39,8 @@ export interface Opportunity {
   status: OpportunityStatus;
   createdAt: string; // 發布日期
   updatedAt: string;
+  /** 內建示範資料：卡片標註「範本」，任何會員皆可刪除 */
+  isTemplate?: boolean;
 }
 
 /** 交流卡答案：字串（radio/dropdown/textarea）、字串陣列（checkbox）、

@@ -39,8 +39,9 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const id = req.nextUrl.searchParams.get("id");
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
-  const ok = await deleteOpportunity(id);
-  if (!ok) return NextResponse.json({ error: "not found" }, { status: 404 });
+  const memberId = req.nextUrl.searchParams.get("memberId");
+  if (!id || !memberId) return NextResponse.json({ error: "id 與 memberId 必填" }, { status: 400 });
+  const result = await deleteOpportunity(id, memberId);
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 403 });
   return NextResponse.json({ ok: true });
 }

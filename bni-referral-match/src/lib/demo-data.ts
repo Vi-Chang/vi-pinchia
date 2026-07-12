@@ -12,7 +12,7 @@ export const DEMO_MEMBERS: Member[] = [
     chapter: "富樂分會", title: "業務總監", phone: "0912-345-678", line: "wang_kc",
     email: "wang@kangcheng.tw", website: "https://kangcheng.tw",
     facebook: "kangcheng.medical", instagram: "kangcheng_med", linkedin: "wang-hsiaoming",
-    role: "admin", color: "#c8102e", media: {},
+    role: "member", color: "#c8102e", media: {},
   },
   {
     id: "m2", name: "李大華", company: "仁華復健診所", industry: "醫療健康",
