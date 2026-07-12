@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
           messages: [
             {
               role: "user",
-              content: `你是 BNI 商機分析顧問。以下是分會成員的交流卡摘要：\n${summary}\n\n請針對「${target.member.name}」，用 150 字以內的繁體中文，說明他本月最應該優先推進的一個合作機會與具體第一步。`,
+              content: `你是商務引薦商機分析顧問。以下是分會成員的交流卡摘要：\n${summary}\n\n請針對「${target.member.name}」，用 150 字以內的繁體中文，說明他本月最應該優先推進的一個合作機會與具體第一步。`,
             },
           ],
         }),

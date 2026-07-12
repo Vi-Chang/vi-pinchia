@@ -205,7 +205,7 @@ export function Heatmap({
   const ramp = (v: number) => {
     if (v === 0) return "rgba(29,27,22,0.04)";
     const t = v / max;
-    // 單一色相（BNI 紅）淺→深
+    // 單一色相（品牌紅）淺→深
     const stops = ["#fbe9ec", "#f3bcc6", "#e9899b", "#d94a63", "#c8102e", "#9e0b22"];
     return stops[Math.min(stops.length - 1, Math.floor(t * stops.length))];
   };

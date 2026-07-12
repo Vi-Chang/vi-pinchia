@@ -1,3 +1,4 @@
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { DEMO_CARDS, DEMO_INTERACTIONS, DEMO_MEMBERS, DEMO_PROJECTS } from "./demo-data";
 import { matchesFor, type MemberBundle } from "./match-engine";
 import type {
@@ -7,6 +8,8 @@ import type {
   ExchangeCard,
   Interaction,
   Member,
+  Opportunity,
+  OpportunityStatus,
   Project,
   Reminder,
 } from "./types";
@@ -21,12 +24,21 @@ import type {
  * 歷史版本完整保留，可隨時查看需求變化。
  */
 
+interface Account {
+  email: string;
+  memberId: string;
+  passwordHash: string;
+  salt: string;
+}
+
 interface Store {
   members: Member[];
   interactions: Interaction[];
   versions: CardVersion[];
   projects: Project[];
   alerts: BizAlert[];
+  accounts: Account[];
+  opportunities: Opportunity[];
 }
 
 declare global {
@@ -97,15 +109,47 @@ function seedVersions(members: Member[]): CardVersion[] {
   return versions;
 }
 
+function hashPassword(password: string, salt: string): string {
+  return createHash("sha256").update(`${salt}:${password}`).digest("hex");
+}
+
+/** 示範會員帳號的預設密碼 */
+const DEMO_PASSWORD = "demo1234";
+
+function seedOpportunities(): Opportunity[] {
+  const mk = (
+    id: string,
+    memberId: string,
+    title: string,
+    content: string,
+    type: string,
+    status: OpportunityStatus,
+    createdAt: string
+  ): Opportunity => ({ id, memberId, title, content, type, status, createdAt, updatedAt: createdAt });
+  return [
+    mk("op1", "m1", "復健診所整廠設備合作", "尋找室內設計與財稅夥伴，一起服務新開業復健診所；提供設備展示中心作為共同提案場地。", "轉介客戶", "open", "2026-07-01T08:00:00Z"),
+    mk("op2", "m3", "醫療空間聯合提案", "醫療空間全案設計，徵醫療設備、建築營造夥伴聯合投標診所新建案。", "資源共享", "open", "2026-07-05T08:00:00Z"),
+    mk("op3", "m9", "中秋聯名禮盒", "徵異業品牌聯名中秋禮盒（印刷包裝、行銷通路尤佳），共享彼此客戶名單。", "異業活動", "open", "2026-06-25T08:00:00Z"),
+    mk("op4", "m5", "創業設立免費健檢", "提供商務夥伴的客戶免費公司設立與稅務健檢諮詢 30 分鐘，歡迎轉介。", "專業諮詢", "open", "2026-07-08T08:00:00Z"),
+    mk("op5", "m7", "官網行銷健檢優惠", "上半年活動已結束：官網與社群行銷健檢五折優惠。", "優惠方案", "closed", "2026-05-01T08:00:00Z"),
+  ];
+}
+
 function demoStore(): Store {
   if (!globalThis.__brmStore) {
     const members = structuredClone(DEMO_MEMBERS);
+    for (const m of members) m.onboarded = true; // 示範會員已有完整交流卡
     globalThis.__brmStore = {
       members,
       interactions: structuredClone(DEMO_INTERACTIONS),
       versions: seedVersions(members),
       projects: structuredClone(DEMO_PROJECTS),
       alerts: [],
+      accounts: members.map((m) => {
+        const salt = randomBytes(8).toString("hex");
+        return { email: m.email.toLowerCase(), memberId: m.id, salt, passwordHash: hashPassword(DEMO_PASSWORD, salt) };
+      }),
+      opportunities: seedOpportunities(),
     };
   }
   return globalThis.__brmStore;
@@ -500,4 +544,158 @@ function rowToMember(r: any): Member {
     color: r.color ?? "#c8102e",
     media: r.media ?? {},
   };
+}
+
+/* ═══════════ Email 帳號登入／註冊 ═══════════ */
+
+const PALETTE_COLORS = ["#c8102e", "#2a78d6", "#eda100", "#1baf7a", "#4a3aa7", "#eb6834", "#e87ba4", "#008300"];
+
+export async function verifyLogin(email: string, password: string): Promise<Member | null> {
+  const store = demoStore();
+  const acc = store.accounts.find((a) => a.email === email.trim().toLowerCase());
+  if (!acc) return null;
+  if (hashPassword(password, acc.salt) !== acc.passwordHash) return null;
+  return store.members.find((m) => m.id === acc.memberId) ?? null;
+}
+
+export interface RegisterInput {
+  name: string;
+  chapter: string;
+  email: string;
+  phone: string;
+  industry: string;
+  password: string;
+  company?: string;
+  line?: string;
+}
+
+export async function registerMember(input: RegisterInput): Promise<{ member?: Member; error?: string }> {
+  const store = demoStore();
+  const email = input.email.trim().toLowerCase();
+  if (store.accounts.some((a) => a.email === email)) {
+    return { error: "這個 Email 已經註冊過了，請直接登入" };
+  }
+  const member: Member = {
+    id: randomUUID(),
+    name: input.name.trim(),
+    company: input.company?.trim() ?? "",
+    industry: input.industry.trim(),
+    chapter: input.chapter.trim(),
+    title: "",
+    phone: input.phone.trim(),
+    line: input.line?.trim() ?? "",
+    email,
+    role: "member",
+    color: PALETTE_COLORS[store.members.length % PALETTE_COLORS.length],
+    media: {},
+    onboarded: false,
+  };
+  store.members.push(member);
+  const salt = randomBytes(8).toString("hex");
+  store.accounts.push({ email, memberId: member.id, salt, passwordHash: hashPassword(input.password, salt) });
+  return { member };
+}
+
+/** 完成首次登入引導：寫入 AI 商機資料並標記完成 */
+export async function completeOnboarding(
+  memberId: string,
+  answers: Record<string, ExchangeCard["answers"][string]>
+): Promise<Member | null> {
+  const store = demoStore();
+  const member = store.members.find((m) => m.id === memberId);
+  if (!member) return null;
+  const existing = await getCard(memberId);
+  await saveCard(memberId, { ...(existing?.answers ?? {}), ...answers });
+  member.onboarded = true;
+  return member;
+}
+
+/* ═══════════ 商機廣場（Opportunity Plaza） ═══════════ */
+
+export async function getOpportunities(): Promise<(Opportunity & { member: Member })[]> {
+  const store = demoStore();
+  return store.opportunities
+    .map((o) => ({ ...o, member: store.members.find((m) => m.id === o.memberId)! }))
+    .filter((o) => o.member)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function saveOpportunity(
+  input: Omit<Opportunity, "id" | "createdAt" | "updatedAt" | "status"> & {
+    id?: string;
+    status?: OpportunityStatus;
+  }
+): Promise<Opportunity> {
+  const store = demoStore();
+  const now = new Date().toISOString();
+  const existing = input.id ? store.opportunities.find((o) => o.id === input.id) : undefined;
+  let opp: Opportunity;
+  if (existing) {
+    opp = Object.assign(existing, {
+      title: input.title,
+      content: input.content,
+      type: input.type,
+      ...(input.status ? { status: input.status } : {}),
+      updatedAt: now,
+    });
+  } else {
+    opp = {
+      id: `op-${Date.now()}`,
+      memberId: input.memberId,
+      title: input.title,
+      content: input.content,
+      type: input.type,
+      status: input.status ?? "open",
+      createdAt: now,
+      updatedAt: now,
+    };
+    store.opportunities.push(opp);
+    const who = nameOf(store.members, input.memberId);
+    // 新增商機 → AI 立即重新計算媒合
+    await recomputeAlerts(input.memberId, `${who}在商機廣場發布了「${opp.title}」`);
+  }
+  return opp;
+}
+
+export async function setOpportunityStatus(id: string, status: OpportunityStatus): Promise<Opportunity | undefined> {
+  const store = demoStore();
+  const o = store.opportunities.find((x) => x.id === id);
+  if (!o) return undefined;
+  o.status = status;
+  o.updatedAt = new Date().toISOString();
+  return o;
+}
+
+export async function deleteOpportunity(id: string): Promise<boolean> {
+  const store = demoStore();
+  const idx = store.opportunities.findIndex((o) => o.id === id);
+  if (idx < 0) return false;
+  store.opportunities.splice(idx, 1);
+  return true;
+}
+
+/** 我要合作：通知商機發布者 */
+export async function expressInterest(oppId: string, fromMemberId: string): Promise<boolean> {
+  const store = demoStore();
+  const opp = store.opportunities.find((o) => o.id === oppId);
+  const from = store.members.find((m) => m.id === fromMemberId);
+  const owner = opp && store.members.find((m) => m.id === opp.memberId);
+  if (!opp || !from || !owner || from.id === owner.id) return false;
+  store.alerts.unshift({
+    id: `al-${Date.now()}-${fromMemberId}`,
+    memberIds: [owner.id, from.id],
+    pair: {
+      aId: from.id,
+      aName: from.name,
+      aIndustry: from.industry,
+      bId: owner.id,
+      bName: owner.name,
+      bIndustry: owner.industry,
+    },
+    probability: 0,
+    reasons: [`${from.name}對你的合作「${opp.title}」表達了合作意願`, `聯絡方式：${from.phone}${from.line ? `｜LINE：${from.line}` : ""}`],
+    trigger: `商機廣場：${from.name}點擊了「我要合作」`,
+    createdAt: new Date().toISOString(),
+  });
+  return true;
 }

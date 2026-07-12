@@ -84,7 +84,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m1",
     updatedAt: "2026-07-10T09:30:00Z",
     answers: {
-      s1_sources: { BNI: 30, 舊客戶: 40, 陌生開發: 20, 展覽: 10 },
+      s1_sources: { 商會引薦: 30, 舊客戶: 40, 陌生開發: 20, 展覽: 10 },
       s1_years: "5–10 年", s1_team: "11–30 人", s1_revenue_model: "長期合約",
       s1_new_clients: "3–5 位", s1_trend: "穩定持平",
       s1_focus: ["開發新客源", "建立合作聯盟"],
@@ -127,7 +127,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m2",
     updatedAt: "2026-07-09T14:00:00Z",
     answers: {
-      s1_sources: { 舊客戶: 50, 網路: 20, BNI: 15, Google: 15 },
+      s1_sources: { 舊客戶: 50, 網路: 20, 商會引薦: 15, Google: 15 },
       s1_years: "10 年以上", s1_team: "6–10 人", s1_revenue_model: "訂閱／回購制",
       s1_new_clients: "11–30 位", s1_trend: "明顯成長",
       s1_focus: ["拓展服務區域", "建立合作聯盟"],
@@ -169,7 +169,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m3",
     updatedAt: "2026-07-08T11:20:00Z",
     answers: {
-      s1_sources: { 舊客戶: 35, BNI: 25, IG: 20, 合作夥伴: 20 },
+      s1_sources: { 舊客戶: 35, 商會引薦: 25, IG: 20, 合作夥伴: 20 },
       s1_years: "5–10 年", s1_team: "6–10 人", s1_revenue_model: "一次性專案",
       s1_new_clients: "3–5 位", s1_trend: "明顯成長",
       s1_focus: ["提高客單價", "品牌與行銷"],
@@ -211,7 +211,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m4",
     updatedAt: "2026-07-07T16:45:00Z",
     answers: {
-      s1_sources: { 舊客戶: 30, 網路: 30, BNI: 20, 陌生開發: 20 },
+      s1_sources: { 舊客戶: 30, 網路: 30, 商會引薦: 20, 陌生開發: 20 },
       s1_years: "10 年以上", s1_team: "11–30 人", s1_revenue_model: "一次性專案",
       s1_new_clients: "6–10 位", s1_trend: "穩定持平",
       s1_focus: ["開發新客源", "數位轉型"],
@@ -253,7 +253,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m5",
     updatedAt: "2026-07-06T10:10:00Z",
     answers: {
-      s1_sources: { 舊客戶: 60, BNI: 20, 合作夥伴: 20 },
+      s1_sources: { 舊客戶: 60, 商會引薦: 20, 合作夥伴: 20 },
       s1_years: "10 年以上", s1_team: "6–10 人", s1_revenue_model: "長期合約",
       s1_new_clients: "3–5 位", s1_trend: "穩定持平",
       s1_focus: ["提高客單價", "開發新產品／服務"],
@@ -295,7 +295,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m6",
     updatedAt: "2026-07-05T09:00:00Z",
     answers: {
-      s1_sources: { 舊客戶: 45, BNI: 25, 合作夥伴: 30 },
+      s1_sources: { 舊客戶: 45, 商會引薦: 25, 合作夥伴: 30 },
       s1_years: "5–10 年", s1_team: "2–5 人", s1_revenue_model: "混合型",
       s1_new_clients: "3–5 位", s1_trend: "穩定持平",
       s1_focus: ["開發新客源", "建立合作聯盟"],
@@ -337,7 +337,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m7",
     updatedAt: "2026-07-04T15:30:00Z",
     answers: {
-      s1_sources: { 舊客戶: 40, IG: 25, BNI: 15, 合作夥伴: 20 },
+      s1_sources: { 舊客戶: 40, IG: 25, 商會引薦: 15, 合作夥伴: 20 },
       s1_years: "3–5 年", s1_team: "6–10 人", s1_revenue_model: "長期合約",
       s1_new_clients: "3–5 位", s1_trend: "明顯成長",
       s1_focus: ["擴編團隊", "開發新產品／服務"],
@@ -379,7 +379,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m8",
     updatedAt: "2026-07-03T13:00:00Z",
     answers: {
-      s1_sources: { 舊客戶: 50, 合作夥伴: 30, BNI: 20 },
+      s1_sources: { 舊客戶: 50, 合作夥伴: 30, 商會引薦: 20 },
       s1_years: "5–10 年", s1_team: "11–30 人", s1_revenue_model: "混合型",
       s1_new_clients: "0–2 位", s1_trend: "穩定持平",
       s1_focus: ["開發新客源", "開發新產品／服務"],
@@ -421,7 +421,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m9",
     updatedAt: "2026-07-02T08:40:00Z",
     answers: {
-      s1_sources: { 舊客戶: 30, IG: 30, FB: 20, BNI: 20 },
+      s1_sources: { 舊客戶: 30, IG: 30, FB: 20, 商會引薦: 20 },
       s1_years: "3–5 年", s1_team: "2–5 人", s1_revenue_model: "零售銷售",
       s1_new_clients: "30 位以上", s1_trend: "明顯成長",
       s1_focus: ["拓展服務區域", "開發新產品／服務"],
@@ -463,7 +463,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
     memberId: "m10",
     updatedAt: "2026-07-01T17:15:00Z",
     answers: {
-      s1_sources: { 舊客戶: 55, BNI: 25, 合作夥伴: 20 },
+      s1_sources: { 舊客戶: 55, 商會引薦: 25, 合作夥伴: 20 },
       s1_years: "10 年以上", s1_team: "11–30 人", s1_revenue_model: "混合型",
       s1_new_clients: "6–10 位", s1_trend: "略有下滑",
       s1_focus: ["開發新客源", "數位轉型", "建立合作聯盟"],

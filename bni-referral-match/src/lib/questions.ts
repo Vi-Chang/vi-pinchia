@@ -58,7 +58,7 @@ export const SECTIONS: Section[] = [
         id: "s1_sources",
         label: "目前主要業務來源（可複選，勾選後請填入大約比例 %）",
         type: "checkbox-percent",
-        options: ["BNI", "舊客戶", "網路", "FB", "IG", "Google", "合作夥伴", "展覽", "陌生開發", "其他"],
+        options: ["商會引薦", "舊客戶", "網路", "FB", "IG", "Google", "合作夥伴", "展覽", "陌生開發", "其他"],
         helper: "比例加總建議為 100%",
       },
       {
@@ -159,13 +159,13 @@ export const SECTIONS: Section[] = [
   {
     id: "s3",
     num: "三",
-    title: "BNI 成果診斷",
-    subtitle: "誠實盤點 BNI 參與現況，找到提升引薦成效的施力點。",
+    title: "商會成果診斷",
+    subtitle: "誠實盤點商會參與現況，找到提升引薦成效的施力點。",
     icon: "📈",
     questions: [
       {
         id: "s3_tenure",
-        label: "加入 BNI 的時間",
+        label: "加入商會的時間",
         type: "dropdown",
         options: ["未滿 6 個月", "6 個月–1 年", "1–2 年", "2–5 年", "5 年以上"],
       },
@@ -195,18 +195,18 @@ export const SECTIONS: Section[] = [
       },
       {
         id: "s3_bni_share",
-        label: "BNI 帶來的業績佔整體比例",
+        label: "商會帶來的業績佔整體比例",
         type: "radio",
         options: ["10% 以下", "10–30%", "30–50%", "50% 以上"],
       },
       {
         id: "s3_satisfaction",
-        label: "目前 BNI 參與滿意度（1 分＝待加強，5 分＝非常滿意）",
+        label: "目前商會參與滿意度（1 分＝待加強，5 分＝非常滿意）",
         type: "scale",
       },
       {
         id: "s3_improve",
-        label: "希望加強的 BNI 環節（可複選）",
+        label: "希望加強的商會環節（可複選）",
         type: "checkbox",
         options: ["121 深度交流", "引薦品質訓練", "分會活動參與", "跨分會交流", "教育組課程", "主題簡報能力", "其他"],
       },

@@ -127,7 +127,7 @@ export async function getPairInsight(
 
   const match = computeMatch(a, b);
   const rule = buildSuggestion(a, b);
-  const prompt = `你是 BNI 商務引薦顧問，擅長協助分會會員設計具體可執行的合作方案。以下是兩位會員的商業檔案與本地規則引擎的初步配對結果，請產出深度合作建議。
+  const prompt = `你是商務引薦顧問，擅長協助分會會員設計具體可執行的合作方案。以下是兩位會員的商業檔案與本地規則引擎的初步配對結果，請產出深度合作建議。
 
 【會員 A】
 ${memberBrief(a)}

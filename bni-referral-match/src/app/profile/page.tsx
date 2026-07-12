@@ -13,7 +13,7 @@ import type { MediaKind, Member } from "@/lib/types";
 const FIELDS: { key: keyof Member; label: string; type?: string; placeholder?: string }[] = [
   { key: "name", label: "姓名" },
   { key: "company", label: "公司" },
-  { key: "chapter", label: "BNI 分會" },
+  { key: "chapter", label: "分會" },
   { key: "title", label: "職稱" },
   { key: "phone", label: "電話", type: "tel" },
   { key: "line", label: "LINE" },

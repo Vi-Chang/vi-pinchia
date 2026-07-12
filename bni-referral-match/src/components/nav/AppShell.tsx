@@ -9,6 +9,7 @@ import { SiteFooter } from "@/components/ui/SiteFooter";
 
 const NAV = [
   { href: "/dashboard", label: "首頁", icon: "🏠" },
+  { href: "/plaza", label: "商機廣場", icon: "🏪" },
   { href: "/cards", label: "交流卡管理", icon: "🗂️" },
   { href: "/card", label: "填寫交流卡", icon: "📋" },
   { href: "/projects", label: "專案", icon: "📁" },
@@ -29,6 +30,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !member) router.replace("/");
+    // 首次登入尚未完成 AI 商機資料 → 引導填寫
+    else if (!loading && member && member.onboarded === false) router.replace("/onboarding");
   }, [loading, member, router]);
 
   if (loading || !member) {
@@ -50,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             B
           </span>
           <div>
-            <div className="text-[15px] font-bold leading-tight text-ink">BNI 商機交流平台</div>
+            <div className="text-[15px] font-bold leading-tight text-ink">商務夥伴商機交流平台</div>
             <div className="text-[11px] tracking-wide text-ink-muted">Business Referral Match</div>
           </div>
         </Link>

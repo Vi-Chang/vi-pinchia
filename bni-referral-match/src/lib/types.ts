@@ -23,10 +23,26 @@ export interface Member {
   role: "member" | "admin";
   color: string;
   media: Partial<Record<MediaKind, string[]>>;
+  /** 是否已完成首次登入的 AI 商機資料引導 */
+  onboarded?: boolean;
+}
+
+/** 商機廣場：會員發布的開放合作 */
+export type OpportunityStatus = "open" | "closed";
+
+export interface Opportunity {
+  id: string;
+  memberId: string;
+  title: string; // 合作標題
+  content: string; // 合作內容
+  type: string; // 合作類型 Tag（轉介客戶/資源共享/異業活動/專業諮詢/優惠方案/其他）
+  status: OpportunityStatus;
+  createdAt: string; // 發布日期
+  updatedAt: string;
 }
 
 /** 交流卡答案：字串（radio/dropdown/textarea）、字串陣列（checkbox）、
- *  比例物件（checkbox-percent，如 { BNI: 30, 舊客戶: 40 }）或數字（scale） */
+ *  比例物件（checkbox-percent，如 { 商會引薦: 30, 舊客戶: 40 }）或數字（scale） */
 export type Answer = string | string[] | Record<string, number> | number | null;
 
 export interface ExchangeCard {

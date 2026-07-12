@@ -67,6 +67,8 @@ export function extractKeywords(bundle: MemberBundle): string[] {
     asText(ans.s6_company_line),
     asText(ans.s6_success_case),
     asText(ans.s6_open_projects),
+    asText(ans.ob_specialty),
+    asText(ans.ob_services),
   ].join(" ");
   return KEYWORDS.filter((k) => text.includes(k));
 }
