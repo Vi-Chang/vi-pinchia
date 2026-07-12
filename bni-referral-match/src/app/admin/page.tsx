@@ -34,9 +34,22 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [openMember, setOpenMember] = useState<string | null>(null);
 
+  const load = () => fetch("/api/admin/stats").then((r) => r.json()).then(setStats);
+
   useEffect(() => {
-    fetch("/api/admin/stats").then((r) => r.json()).then(setStats);
+    load();
   }, []);
+
+  const removeMember = async (m: { id: string; name: string }) => {
+    if (!member) return;
+    if (!confirm(`確定要刪除會員「${m.name}」嗎？\n其帳號、交流卡、專案、商機與互動紀錄將一併刪除，無法復原。`)) return;
+    const res = await fetch(`/api/members?id=${m.id}&requesterId=${member.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      alert((await res.json()).error || "刪除失敗");
+      return;
+    }
+    await load();
+  };
 
   if (member && member.role !== "admin") {
     return (
@@ -147,8 +160,10 @@ export default function AdminPage() {
 
             {/* 所有會員與回答 */}
             <section className="glass animate-fade-up p-6">
-              <h2 className="font-bold text-ink">👥 所有會員與交流卡回答</h2>
-              <p className="mt-1 text-xs text-ink-muted">點擊會員展開完整回答內容</p>
+              <h2 className="font-bold text-ink">👥 所有填單者資料</h2>
+              <p className="mt-1 text-xs text-ink-muted">
+                點擊會員展開完整回答內容；管理員可刪除會員（連同其所有資料）
+              </p>
               <div className="mt-4 space-y-2">
                 {stats.members.map((m) => {
                   const card = stats.cards.find((c) => c.memberId === m.id);
@@ -179,6 +194,23 @@ export default function AdminPage() {
                         </div>
                         <span className="text-ink-muted">{open ? "▴" : "▾"}</span>
                       </button>
+                      {open && (
+                        <div className="flex flex-wrap items-center gap-3 border-t border-ink/5 bg-white/30 px-5 py-3 text-xs text-ink-soft">
+                          <span>🏛️ {m.chapter || "—"}</span>
+                          <span>📱 {m.phone || "—"}</span>
+                          <span>✉️ {m.email || "—"}</span>
+                          {m.line && <span>💬 LINE：{m.line}</span>}
+                          {m.isDemo && <span className="text-amber-600">（範例）</span>}
+                          {m.id !== member?.id && m.role !== "admin" && (
+                            <button
+                              onClick={() => removeMember(m)}
+                              className="ml-auto rounded-full border border-bni-red/40 px-3 py-1 font-semibold text-bni-red transition hover:bg-bni-red hover:text-white"
+                            >
+                              🗑️ 刪除會員
+                            </button>
+                          )}
+                        </div>
+                      )}
                       {open && card && (
                         <dl className="grid gap-3 border-t border-ink/5 p-5 sm:grid-cols-2">
                           {ALL_QUESTIONS.map((q) => {

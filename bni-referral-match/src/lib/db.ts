@@ -677,6 +677,28 @@ export async function completeOnboarding(
   return member;
 }
 
+/** 管理員刪除會員：連同帳號、交流卡、專案、商機、互動與快訊一併移除 */
+export async function deleteMember(
+  id: string,
+  requesterId: string
+): Promise<{ ok: boolean; error?: string }> {
+  const store = demoStore();
+  const requester = store.members.find((m) => m.id === requesterId);
+  if (requester?.role !== "admin") return { ok: false, error: "僅管理員可刪除會員" };
+  if (id === requesterId) return { ok: false, error: "無法刪除自己的帳號" };
+  const target = store.members.find((m) => m.id === id);
+  if (!target) return { ok: false, error: "找不到這位會員" };
+  if (target.role === "admin") return { ok: false, error: "無法刪除其他管理員" };
+  store.members = store.members.filter((m) => m.id !== id);
+  store.accounts = store.accounts.filter((a) => a.memberId !== id);
+  store.versions = store.versions.filter((v) => v.memberId !== id);
+  store.projects = store.projects.filter((p) => p.memberId !== id);
+  store.opportunities = store.opportunities.filter((o) => o.memberId !== id);
+  store.interactions = store.interactions.filter((i) => i.fromId !== id && i.toId !== id);
+  store.alerts = store.alerts.filter((a) => !a.memberIds.includes(id));
+  return { ok: true };
+}
+
 /* ═══════════ 商機廣場（Opportunity Plaza） ═══════════ */
 
 export async function getOpportunities(): Promise<(Opportunity & { member: Member })[]> {
