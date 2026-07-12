@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/nav/AppShell";
 import { SaveIndicator } from "@/components/ui/SaveIndicator";
@@ -21,22 +23,34 @@ import { SECTIONS, type Question } from "@/lib/questions";
 import type { Answer } from "@/lib/types";
 
 export default function CardPage() {
+  return (
+    <Suspense fallback={<AppShell><div /></AppShell>}>
+      <CardEditor />
+    </Suspense>
+  );
+}
+
+function CardEditor() {
   const { member } = useAuth();
+  const versionId = useSearchParams().get("v");
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [versionInfo, setVersionInfo] = useState<{ version: number; title: string; status: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [active, setActive] = useState(0);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
     if (!member) return;
-    fetch(`/api/card?memberId=${member.id}`)
+    const qs = versionId ? `&versionId=${versionId}` : "";
+    fetch(`/api/card?memberId=${member.id}${qs}`)
       .then((r) => r.json())
       .then((d) => {
         setAnswers(d.card?.answers ?? {});
+        setVersionInfo(d.version ?? null);
         setProgress(d.progress ?? 0);
         setLoaded(true);
       });
-  }, [member]);
+  }, [member, versionId]);
 
   const { state } = useAutosave(
     answers,
@@ -45,7 +59,7 @@ export default function CardPage() {
       const res = await fetch("/api/card", {
         method: "PUT",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ memberId: member.id, answers: a }),
+        body: JSON.stringify({ memberId: member.id, answers: a, versionId: versionId ?? undefined }),
       });
       if (!res.ok) throw new Error("save failed");
       const d = await res.json();
@@ -87,6 +101,14 @@ export default function CardPage() {
               <p className="mt-1 text-sm text-ink-soft">
                 完整盤點你的事業與商機需求，AI 會依據內容自動配對。
               </p>
+              {versionInfo && (
+                <p className="mt-2 text-xs text-ink-muted">
+                  正在編輯：版本 {versionInfo.version}｜{versionInfo.title}
+                  <Link href="/cards" className="ml-2 font-semibold text-bni-red">
+                    ← 回交流卡管理
+                  </Link>
+                </p>
+              )}
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-bni-red">{progress}%</div>

@@ -73,6 +73,58 @@ model Interaction {
   @@map("interactions")
 }
 
+// 交流卡生命週期：多版本商業檔案，完整保留歷史
+model CardVersion {
+  id        String   @id @default(uuid())
+  memberId  String   @map("member_id")
+  version   Int
+  title     String   @default("")
+  answers   Json     @default("{}")
+  status    String   @default("draft") // draft | active | completed | archived
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  createdBy String   @default("") @map("created_by")
+  updatedBy String   @default("") @map("updated_by")
+
+  @@unique([memberId, version])
+  @@index([memberId, status])
+  @@map("card_versions")
+}
+
+// 專案管理：每位會員可建立多個專案
+model BizProject {
+  id               String   @id @default(uuid())
+  memberId         String   @map("member_id")
+  name             String
+  intro            String   @default("")
+  idealReferrals   String   @default("") @map("ideal_referrals")
+  industriesNeeded Json     @default("[]") @map("industries_needed")
+  resourcesOffered String   @default("") @map("resources_offered")
+  expectedClose    String   @default("") @map("expected_close")
+  startDate        String   @default("") @map("start_date")
+  endDate          String   @default("") @map("end_date")
+  isMain           Boolean  @default(false) @map("is_main")
+  importance       Int      @default(3)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([memberId])
+  @@map("projects")
+}
+
+// AI 商機快訊：媒合成功率 >= 85% 時通知雙方
+model BizAlertRow {
+  id          String   @id @default(uuid())
+  memberIds   Json     @default("[]") @map("member_ids")
+  pair        Json     @default("{}")
+  probability Int
+  reasons     Json     @default("[]")
+  trigger     String   @default("")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("biz_alerts")
+}
+
 model MatchScore {
   memberId    String   @map("member_id")
   targetId    String   @map("target_id")

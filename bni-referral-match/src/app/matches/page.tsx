@@ -5,29 +5,56 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/nav/AppShell";
 import { Avatar } from "@/components/ui/Avatar";
 import { Stars } from "@/components/ui/Stars";
+import type { CoopSuggestion } from "@/lib/suggestions";
 import type { MatchResult, Member } from "@/lib/types";
 
-type MatchWithMember = MatchResult & { target: Member };
+type MatchWithMember = MatchResult & { target: Member; suggestion?: CoopSuggestion };
 
 export default function MatchesPage() {
   const { member } = useAuth();
   const [matches, setMatches] = useState<MatchWithMember[] | null>(null);
+  const [scope, setScope] = useState<"all" | "chapter">("all");
+  const [open, setOpen] = useState<string | null>(null);
 
   useEffect(() => {
     if (!member) return;
-    fetch(`/api/matches?memberId=${member.id}`)
+    setMatches(null);
+    fetch(`/api/matches?memberId=${member.id}&scope=${scope}`)
       .then((r) => r.json())
       .then((d) => setMatches(d.matches ?? []));
-  }, [member]);
+  }, [member, scope]);
 
   return (
     <AppShell>
       <div className="mx-auto max-w-5xl space-y-5">
         <div className="glass animate-fade-up p-7">
-          <h1 className="text-2xl font-bold tracking-tight text-ink">💎 商機配對引擎</h1>
-          <p className="mt-1 text-sm text-ink-soft">
-            依產業、理想客戶、資源互補、服務地區與關鍵字自動媒合，Match Score 0–100 分。
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-ink">💎 商機配對引擎</h1>
+              <p className="mt-1 text-sm text-ink-soft">
+                以主推專案與最新交流卡為最高優先，加上理想客戶、資源互補、過去合作、地區、產業與關鍵字媒合。
+              </p>
+            </div>
+            {/* 多分會：可切換媒合範圍 */}
+            <div className="glass flex overflow-hidden rounded-full text-sm">
+              <button
+                onClick={() => setScope("all")}
+                className={`px-4 py-2 font-medium transition ${
+                  scope === "all" ? "bg-ink text-white" : "text-ink-soft"
+                }`}
+              >
+                全部分會
+              </button>
+              <button
+                onClick={() => setScope("chapter")}
+                className={`px-4 py-2 font-medium transition ${
+                  scope === "chapter" ? "bg-ink text-white" : "text-ink-soft"
+                }`}
+              >
+                僅{member?.chapter ?? "同分會"}
+              </button>
+            </div>
+          </div>
         </div>
 
         {!matches && (
@@ -47,7 +74,7 @@ export default function MatchesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="font-bold text-ink">{m.target.name}</div>
                   <div className="truncate text-xs text-ink-muted">
-                    {m.target.company} · {m.target.industry}
+                    {m.target.company} · {m.target.industry} · {m.target.chapter}
                   </div>
                   <Stars count={m.stars} size={13} />
                 </div>
@@ -89,6 +116,43 @@ export default function MatchesPage() {
                   </li>
                 )}
               </ul>
+
+              {/* AI 商機建議 */}
+              {m.suggestion && (
+                <div className="mt-4 border-t border-ink/5 pt-3">
+                  <button
+                    onClick={() => setOpen(open === m.targetId ? null : m.targetId)}
+                    className="text-sm font-semibold text-bni-red"
+                  >
+                    🤖 AI 商機建議 {open === m.targetId ? "▲" : "▼"}
+                  </button>
+                  {open === m.targetId && (
+                    <dl className="mt-3 space-y-3 text-[13px]">
+                      <div>
+                        <dt className="font-semibold text-ink">建議合作方式</dt>
+                        <dd className="mt-1 flex flex-wrap gap-1.5">
+                          {m.suggestion.coopMethods.map((c) => (
+                            <span key={c} className="rounded-full bg-ink/5 px-2.5 py-0.5 text-xs text-ink-soft">
+                              {c}
+                            </span>
+                          ))}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-ink">可以互相介紹的客戶</dt>
+                        <dd className="mt-1 space-y-1 text-ink-soft">
+                          <p>→ {m.suggestion.introAtoB}</p>
+                          <p>← {m.suggestion.introBtoA}</p>
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold text-ink">建議如何向對方提案</dt>
+                        <dd className="mt-1 text-ink-soft">{m.suggestion.pitch}</dd>
+                      </div>
+                    </dl>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

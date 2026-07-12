@@ -1,4 +1,4 @@
-import type { ExchangeCard, Interaction, Member } from "./types";
+import type { ExchangeCard, Interaction, Member, Project } from "./types";
 
 /** 圖表分類色盤（已通過 CVD 驗證，奶油色底） */
 export const PALETTE = [
@@ -65,14 +65,14 @@ export const DEMO_MEMBERS: Member[] = [
   },
   {
     id: "m9", name: "蔡淑芬", company: "芬芳手作烘焙", industry: "餐飲食品",
-    chapter: "富樂分會", title: "負責人", phone: "0921-888-999", line: "fenfang_bake",
+    chapter: "卓越分會", title: "負責人", phone: "0921-888-999", line: "fenfang_bake",
     email: "tsai@fenfang.tw", website: "https://fenfang.tw",
     facebook: "fenfang.bakery", instagram: "fenfang_bakery", linkedin: "",
     role: "member", color: "#c8102e", media: {},
   },
   {
     id: "m10", name: "周文傑", company: "傑印精緻印刷", industry: "印刷包裝",
-    chapter: "富樂分會", title: "總經理", phone: "0932-999-000", line: "jayprint",
+    chapter: "卓越分會", title: "總經理", phone: "0932-999-000", line: "jayprint",
     email: "chou@jayprint.tw", website: "https://jayprint.tw",
     facebook: "jayprint.tw", instagram: "jayprint", linkedin: "chou-wenchieh",
     role: "member", color: "#2a78d6", media: {},
@@ -120,6 +120,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
       s6_regions: ["台北市", "新北市", "桃園市"],
       s6_industries: ["醫療健康"],
       s6_cross_region: "可以", s6_out_of_city: "接受",
+      s6_open_projects: "復健診所整廠設備專案：徵室內設計與財稅夥伴，鎖定新開業診所，預計 Q4 前簽約。",
     },
   },
   {
@@ -198,7 +199,7 @@ export const DEMO_CARDS: ExchangeCard[] = [
       s6_no_go: "只做局部修繕的小工程、無限次比稿。",
       s6_coop_flow: "引薦後免費丈量 → 概念提案 → 簽約設計 → 工程監造。",
       s6_success_case: "打造北市復健診所旗艦空間，開幕月新患成長四成。",
-      s6_resources_give: ["設計／製作產能", "供應商網絡", "異業合作通路"],
+      s6_resources_give: ["設計／製作產能", "供應商網絡", "異業合作通路", "客戶名單交換", "活動合辦"],
       s6_resources_need: ["客戶名單交換", "媒體／採訪管道"],
       s6_company_line: "美玲空間設計－商業空間的品牌化設計團隊。",
       s6_regions: ["台北市", "新北市", "桃園市", "新竹縣市"],
@@ -540,4 +541,56 @@ export const DEMO_INTERACTIONS: Interaction[] = [
   { id: "s1", type: "shared_client", fromId: "m3", toId: "m4", date: "2026-06-05", note: "連鎖烘焙展店案" },
   { id: "s2", type: "shared_client", fromId: "m1", toId: "m2", date: "2026-06-08", note: "復健診所開業案" },
   { id: "s3", type: "shared_client", fromId: "m7", toId: "m9", date: "2026-06-12", note: "烘焙品牌行銷案" },
+];
+
+/** 示範專案（Projects）：每位會員可建立多個專案 */
+export const DEMO_PROJECTS: Project[] = [
+  {
+    id: "p1",
+    memberId: "m1",
+    name: "復健診所整廠設備專案",
+    intro: "鎖定新開業與擴點的復健科診所，提供從評估、採購到安裝的一站式設備方案。",
+    idealReferrals: "近期籌備開業或擴點的復健科、骨科診所院長。",
+    industriesNeeded: ["室內設計", "會計財稅", "保險理財"],
+    resourcesOffered: "醫療設備展示中心場地、院所端人脈、開業設備健檢服務。",
+    expectedClose: "2026 Q4",
+    startDate: "2026-06-01",
+    endDate: "2026-12-31",
+    isMain: true,
+    importance: 5,
+    createdAt: "2026-06-01T08:00:00Z",
+    updatedAt: "2026-07-05T08:00:00Z",
+  },
+  {
+    id: "p2",
+    memberId: "m1",
+    name: "長照機構設備汰換",
+    intro: "協助既有長照機構汰換老舊復健設備，含補助申請協助。",
+    idealReferrals: "營運三年以上的長照機構負責人。",
+    industriesNeeded: ["保險理財", "法律服務"],
+    resourcesOffered: "補助申請經驗、設備租賃方案。",
+    expectedClose: "2026 Q3",
+    startDate: "2026-03-01",
+    endDate: "2026-06-30",
+    isMain: false,
+    importance: 3,
+    createdAt: "2026-03-01T08:00:00Z",
+    updatedAt: "2026-05-20T08:00:00Z",
+  },
+  {
+    id: "p3",
+    memberId: "m3",
+    name: "醫療空間設計主推案",
+    intro: "主打診所、醫美空間的全案設計，含動線規劃與醫療法規配合。",
+    idealReferrals: "籌備新診所或改裝的醫師、醫療機構。",
+    industriesNeeded: ["醫療健康", "建築營造", "房地產"],
+    resourcesOffered: "醫療空間作品集、免費丈量與初步配置建議。",
+    expectedClose: "2026 Q4",
+    startDate: "2026-05-01",
+    endDate: "2027-01-31",
+    isMain: true,
+    importance: 5,
+    createdAt: "2026-05-01T08:00:00Z",
+    updatedAt: "2026-07-08T08:00:00Z",
+  },
 ];

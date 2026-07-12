@@ -35,6 +35,61 @@ export interface ExchangeCard {
   updatedAt: string;
 }
 
+/** 交流卡狀態：草稿 / 使用中 / 已完成 / 已封存 */
+export type CardStatus = "draft" | "active" | "completed" | "archived";
+
+/** 動態商業檔案：一位會員可擁有多份交流卡版本，完整保留歷史 */
+export interface CardVersion {
+  id: string;
+  memberId: string;
+  version: number; // 版本號（同一會員遞增）
+  title: string; // 版本摘要，如「開始推廣植牙」
+  answers: Record<string, Answer>;
+  status: CardStatus;
+  createdAt: string; // 建立日期
+  updatedAt: string; // 最後修改日期
+  createdBy: string; // 建立者
+  updatedBy: string; // 修改者
+}
+
+/** 專案（Projects）：每位會員可建立多個專案 */
+export interface Project {
+  id: string;
+  memberId: string;
+  name: string; // 專案名稱
+  intro: string; // 專案介紹
+  idealReferrals: string; // 希望介紹的客戶
+  industriesNeeded: string[]; // 需要哪些產業合作
+  resourcesOffered: string; // 可提供哪些資源
+  expectedClose: string; // 預計成交期間
+  startDate: string; // 開始日期
+  endDate: string; // 結束日期
+  isMain: boolean; // 是否目前主推
+  importance: number; // 重要程度 1–5 星
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 智慧提醒 */
+export interface Reminder {
+  id: string;
+  kind: "card_stale" | "project_expired";
+  message: string;
+  actionLabel: string;
+  actionHref: string;
+}
+
+/** AI 商機快訊：媒合成功率 ≥ 85% 時通知雙方 */
+export interface BizAlert {
+  id: string;
+  memberIds: [string, string]; // 通知雙方
+  pair: { aId: string; aName: string; aIndustry: string; bId: string; bName: string; bIndustry: string };
+  probability: number;
+  reasons: string[];
+  trigger: string; // 觸發原因，如「王小明更新了交流卡」
+  createdAt: string;
+}
+
 export type InteractionType = "121" | "referral" | "cooperation" | "shared_client";
 
 export interface Interaction {

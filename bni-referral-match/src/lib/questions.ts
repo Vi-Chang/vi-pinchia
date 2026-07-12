@@ -386,6 +386,13 @@ export const SECTIONS: Section[] = [
         type: "radio",
         options: ["接受", "視案件而定", "暫不接受"],
       },
+      {
+        id: "s6_open_projects",
+        label: "現在正在開放的合作或專案",
+        helper: "目前最希望被引薦、正在推進中的合作機會或專案，AI 會優先納入媒合分析。",
+        type: "textarea",
+        placeholder: "例：復健診所整廠設備專案，徵室內設計與財稅夥伴，預計 Q4 前簽約…",
+      },
     ],
   },
 ];

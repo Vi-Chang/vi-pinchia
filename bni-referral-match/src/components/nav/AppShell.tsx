@@ -8,7 +8,10 @@ import { Avatar } from "@/components/ui/Avatar";
 
 const NAV = [
   { href: "/dashboard", label: "首頁", icon: "🏠" },
-  { href: "/card", label: "交流卡", icon: "📋" },
+  { href: "/cards", label: "交流卡管理", icon: "🗂️" },
+  { href: "/card", label: "填寫交流卡", icon: "📋" },
+  { href: "/projects", label: "專案", icon: "📁" },
+  { href: "/alerts", label: "商機快訊", icon: "🔔" },
   { href: "/matches", label: "商機配對", icon: "💎" },
   { href: "/analysis", label: "AI 分析", icon: "🤖" },
   { href: "/network", label: "關係圖", icon: "🕸️" },
@@ -53,7 +56,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <nav className="glass flex flex-1 flex-col gap-1 p-3">
           {items.map((n) => {
-            const active = pathname.startsWith(n.href);
+            const active = pathname === n.href || pathname.startsWith(n.href + "/");
             return (
               <Link
                 key={n.href}
@@ -109,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <nav className="fixed inset-x-3 bottom-3 z-40 lg:hidden">
         <div className="glass-strong flex items-center justify-around px-2 py-2">
           {items.slice(0, 5).map((n) => {
-            const active = pathname.startsWith(n.href);
+            const active = pathname === n.href || pathname.startsWith(n.href + "/");
             return (
               <Link
                 key={n.href}

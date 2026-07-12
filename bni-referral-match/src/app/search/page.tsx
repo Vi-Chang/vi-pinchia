@@ -12,17 +12,29 @@ export default function SearchPage() {
   const [cards, setCards] = useState<ExchangeCard[]>([]);
   const [q, setQ] = useState("");
   const [scope, setScope] = useState<(typeof SCOPES)[number]>("全部");
+  const [chapter, setChapter] = useState("全部分會");
 
   useEffect(() => {
     fetch("/api/members").then((r) => r.json()).then((d) => setMembers(d.members ?? []));
     fetch("/api/admin/stats").then((r) => r.json()).then((d) => setCards(d.cards ?? []));
   }, []);
 
+  const chapters = useMemo(
+    () => ["全部分會", ...Array.from(new Set(members.map((m) => m.chapter).filter(Boolean)))],
+    [members]
+  );
+
   const results = useMemo(() => {
     const kw = q.trim();
-    if (!kw) return [];
+    const pool = chapter === "全部分會" ? members : members.filter((m) => m.chapter === chapter);
+    // 只選分會、未輸入關鍵字 → 直接列出該分會會員
+    if (!kw) {
+      if (chapter === "全部分會") return [];
+      const cardMap = new Map(cards.map((c) => [c.memberId, c]));
+      return pool.map((m) => ({ member: m, card: cardMap.get(m.id), hitField: undefined }));
+    }
     const cardMap = new Map(cards.map((c) => [c.memberId, c]));
-    return members
+    return pool
       .map((m) => {
         const card = cardMap.get(m.id);
         const a = card?.answers ?? {};
@@ -52,7 +64,7 @@ export default function SearchPage() {
         return { member: m, card, hitField };
       })
       .filter(Boolean) as { member: Member; card?: ExchangeCard; hitField?: string }[];
-  }, [q, scope, members, cards]);
+  }, [q, scope, chapter, members, cards]);
 
   return (
     <AppShell>
@@ -80,11 +92,25 @@ export default function SearchPage() {
               </button>
             ))}
           </div>
+          {/* 多分會：依分會查詢 */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-ink-muted">分會：</span>
+            {chapters.map((c) => (
+              <button
+                key={c}
+                onClick={() => setChapter(c)}
+                className={`chip ${chapter === c ? "chip-on" : ""}`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {q.trim() && (
+        {(q.trim() || chapter !== "全部分會") && (
           <p className="px-2 text-sm text-ink-muted">
-            找到 {results.length} 位符合「{q}」的會員
+            {chapter !== "全部分會" && `【${chapter}】`}
+            找到 {results.length} 位{q.trim() ? `符合「${q}」的` : ""}會員
           </p>
         )}
 
@@ -98,6 +124,7 @@ export default function SearchPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-bold text-ink">{m.name}</span>
                     <span className="tag-gold">{m.industry}</span>
+                    <span className="rounded-full bg-ink/5 px-2.5 py-1 text-xs text-ink-soft">{m.chapter}</span>
                     {hitField && hitField !== "姓名" && (
                       <span className="tag-red">命中：{hitField}</span>
                     )}

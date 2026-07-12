@@ -199,3 +199,51 @@ insert into public.interactions (id, type, from_id, to_id, date, note, amount, c
   ('s2', 'shared_client', 'm1', 'm2', '2026-06-08', '復健診所開業案', null, null),
   ('s3', 'shared_client', 'm7', 'm9', '2026-06-12', '烘焙品牌行銷案', null, null)
 on conflict (id) do nothing;
+
+-- ═══════════ 商機交流卡生命週期（Business Profile Timeline） ═══════════
+
+-- 交流卡版本：動態商業檔案，完整保留歷史
+create table if not exists card_versions (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members(id) on delete cascade,
+  version int not null,
+  title text not null default '',
+  answers jsonb not null default '{}',
+  status text not null default 'draft', -- draft | active | completed | archived
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  created_by text not null default '',
+  updated_by text not null default '',
+  unique (member_id, version)
+);
+create index if not exists idx_card_versions_member on card_versions (member_id, status);
+
+-- 專案管理
+create table if not exists projects (
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null references members(id) on delete cascade,
+  name text not null,
+  intro text not null default '',
+  ideal_referrals text not null default '',
+  industries_needed jsonb not null default '[]',
+  resources_offered text not null default '',
+  expected_close text not null default '',
+  start_date text not null default '',
+  end_date text not null default '',
+  is_main boolean not null default false,
+  importance int not null default 3,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_projects_member on projects (member_id);
+
+-- AI 商機快訊
+create table if not exists biz_alerts (
+  id uuid primary key default gen_random_uuid(),
+  member_ids jsonb not null default '[]',
+  pair jsonb not null default '{}',
+  probability int not null,
+  reasons jsonb not null default '[]',
+  trigger text not null default '',
+  created_at timestamptz not null default now()
+);
