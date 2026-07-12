@@ -1,0 +1,90 @@
+// BNI 商機交流平台 - Prisma Schema（對應 supabase/schema.sql）
+// 使用方式：設定 DATABASE_URL / DIRECT_URL 後執行 npx prisma generate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Member {
+  id        String   @id @default(uuid())
+  authId    String?  @map("auth_id") @db.Uuid
+  name      String
+  company   String   @default("")
+  industry  String   @default("")
+  chapter   String   @default("")
+  title     String   @default("")
+  phone     String   @default("")
+  line      String   @default("")
+  email     String   @default("")
+  website   String?
+  facebook  String?
+  instagram String?
+  linkedin  String?
+  role      String   @default("member")
+  color     String   @default("#c8102e")
+  media     Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  card             ExchangeCard?
+  interactionsFrom Interaction[] @relation("from")
+  interactionsTo   Interaction[] @relation("to")
+  matchesAsSource  MatchScore[]  @relation("matchSource")
+  matchesAsTarget  MatchScore[]  @relation("matchTarget")
+
+  @@index([industry])
+  @@index([chapter])
+  @@map("members")
+}
+
+model ExchangeCard {
+  memberId  String   @id @map("member_id")
+  answers   Json     @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@map("exchange_cards")
+}
+
+model Interaction {
+  id        String   @id @default(uuid())
+  type      String // '121' | 'referral' | 'cooperation' | 'shared_client'
+  fromId    String   @map("from_id")
+  toId      String   @map("to_id")
+  date      DateTime @db.Date
+  note      String?
+  amount    Decimal?
+  closed    Boolean?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  from Member @relation("from", fields: [fromId], references: [id], onDelete: Cascade)
+  to   Member @relation("to", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@index([fromId])
+  @@index([toId])
+  @@index([type, date])
+  @@map("interactions")
+}
+
+model MatchScore {
+  memberId    String   @map("member_id")
+  targetId    String   @map("target_id")
+  score       Int
+  probability Int
+  reasons     Json     @default("[]")
+  tags        Json     @default("[]")
+  computedAt  DateTime @default(now()) @map("computed_at")
+
+  member Member @relation("matchSource", fields: [memberId], references: [id], onDelete: Cascade)
+  target Member @relation("matchTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@id([memberId, targetId])
+  @@map("match_scores")
+}
