@@ -416,6 +416,50 @@
     padding: 10px 0;
   }
 
+  .gb-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .gb-actions button {
+    font-family: inherit;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text-soft);
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 999px;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .gb-actions button:hover {
+    color: var(--accent-deep);
+    border-color: var(--accent-deep);
+  }
+
+  .gb-edit-area {
+    margin-top: 8px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .gb-edit-area textarea {
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 10px 12px;
+    outline: none;
+    resize: none;
+  }
+
+  .gb-edit-area textarea:focus { border-color: var(--accent-deep); }
+
   .footer {
     text-align: center;
     padding: 24px;
@@ -554,7 +598,15 @@
   const statusEl = document.getElementById('gbStatus');
   const listEl = document.getElementById('gbList');
 
+  function getTokens() {
+    try { return JSON.parse(localStorage.getItem('gb_tokens') || '{}'); } catch { return {}; }
+  }
+  function saveTokens(t) {
+    localStorage.setItem('gb_tokens', JSON.stringify(t));
+  }
+
   function render(messages) {
+    const tokens = getTokens();
     listEl.innerHTML = '';
     if (!messages.length) {
       const empty = document.createElement('p');
@@ -576,7 +628,7 @@
 
       const time = document.createElement('span');
       time.className = 'gb-time';
-      time.textContent = (m.created_at || '').slice(0, 16);
+      time.textContent = (m.created_at || '').slice(0, 16) + (m.edited ? '（已編輯）' : '');
 
       const msg = document.createElement('p');
       msg.className = 'gb-msg';
@@ -586,8 +638,99 @@
       head.appendChild(time);
       item.appendChild(head);
       item.appendChild(msg);
+
+      const token = tokens[m.id];
+      if (token) {
+        const actions = document.createElement('div');
+        actions.className = 'gb-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.textContent = '✏️ 編輯';
+        editBtn.addEventListener('click', () => startEdit(item, msg, actions, m, token));
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = '🗑️ 刪除';
+        delBtn.addEventListener('click', async () => {
+          if (!confirm('確定要刪除這則留言嗎？')) return;
+          try {
+            const res = await fetch('/api/messages/' + m.id, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token })
+            });
+            if (!res.ok) throw new Error((await res.json()).error || '刪除失敗');
+            const t = getTokens();
+            delete t[m.id];
+            saveTokens(t);
+            await load();
+          } catch (err) {
+            alert(err.message || '刪除失敗，請稍後再試。');
+          }
+        });
+
+        actions.appendChild(editBtn);
+        actions.appendChild(delBtn);
+        item.appendChild(actions);
+      }
+
       listEl.appendChild(item);
     }
+  }
+
+  function startEdit(item, msgEl, actionsEl, m, token) {
+    msgEl.style.display = 'none';
+    actionsEl.style.display = 'none';
+
+    const area = document.createElement('div');
+    area.className = 'gb-edit-area';
+
+    const ta = document.createElement('textarea');
+    ta.rows = 3;
+    ta.maxLength = 200;
+    ta.value = m.message;
+
+    const btns = document.createElement('div');
+    btns.className = 'gb-actions';
+    btns.style.marginTop = '0';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.textContent = '💾 儲存';
+    saveBtn.addEventListener('click', async () => {
+      const newMsg = ta.value.trim();
+      if (!newMsg) { alert('留言不能是空白喔'); return; }
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch('/api/messages/' + m.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, name: m.name, message: newMsg })
+        });
+        if (!res.ok) throw new Error((await res.json()).error || '儲存失敗');
+        await load();
+      } catch (err) {
+        alert(err.message || '儲存失敗，請稍後再試。');
+        saveBtn.disabled = false;
+      }
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = '取消';
+    cancelBtn.addEventListener('click', () => {
+      area.remove();
+      msgEl.style.display = '';
+      actionsEl.style.display = '';
+    });
+
+    btns.appendChild(saveBtn);
+    btns.appendChild(cancelBtn);
+    area.appendChild(ta);
+    area.appendChild(btns);
+    item.appendChild(area);
+    ta.focus();
   }
 
   async function load() {
@@ -616,6 +759,11 @@
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '送出失敗');
+      if (data.id && data.token) {
+        const t = getTokens();
+        t[data.id] = data.token;
+        saveTokens(t);
+      }
       msgInput.value = '';
       statusEl.textContent = '留言成功！';
       await load();
