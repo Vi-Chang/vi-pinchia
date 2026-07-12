@@ -5,16 +5,46 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/nav/AppShell";
 import { Avatar } from "@/components/ui/Avatar";
 import { Stars } from "@/components/ui/Stars";
+import type { PairInsight } from "@/lib/ai-insight";
 import type { CoopSuggestion } from "@/lib/suggestions";
 import type { MatchResult, Member } from "@/lib/types";
 
 type MatchWithMember = MatchResult & { target: Member; suggestion?: CoopSuggestion };
+
+type InsightState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "done"; insight: PairInsight; cached: boolean };
 
 export default function MatchesPage() {
   const { member } = useAuth();
   const [matches, setMatches] = useState<MatchWithMember[] | null>(null);
   const [scope, setScope] = useState<"all" | "chapter">("all");
   const [open, setOpen] = useState<string | null>(null);
+  const [insights, setInsights] = useState<Record<string, InsightState>>({});
+
+  const runAiInsight = async (targetId: string) => {
+    if (!member || insights[targetId]?.status === "loading") return;
+    setInsights((s) => ({ ...s, [targetId]: { status: "loading" } }));
+    try {
+      const res = await fetch("/api/ai-insight", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ memberId: member.id, targetId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "AI 分析失敗");
+      setInsights((s) => ({
+        ...s,
+        [targetId]: { status: "done", insight: d.insight, cached: d.cached },
+      }));
+    } catch (e) {
+      setInsights((s) => ({
+        ...s,
+        [targetId]: { status: "error", message: e instanceof Error ? e.message : "AI 分析失敗" },
+      }));
+    }
+  };
 
   useEffect(() => {
     if (!member) return;
@@ -148,6 +178,72 @@ export default function MatchesPage() {
                       <div>
                         <dt className="font-semibold text-ink">建議如何向對方提案</dt>
                         <dd className="mt-1 text-ink-soft">{m.suggestion.pitch}</dd>
+                      </div>
+
+                      {/* AI 按需深度分析：點擊才呼叫 Anthropic API */}
+                      <div className="border-t border-ink/5 pt-3">
+                        {!insights[m.targetId] && (
+                          <button
+                            onClick={() => runAiInsight(m.targetId)}
+                            className="btn-gold !px-4 !py-2 !text-xs"
+                          >
+                            ✨ AI 深度分析（呼叫 Claude 產生專屬提案）
+                          </button>
+                        )}
+                        {insights[m.targetId]?.status === "loading" && (
+                          <p className="animate-pulse text-xs text-ink-muted">
+                            🤖 Claude 正在深度分析這組合作…
+                          </p>
+                        )}
+                        {insights[m.targetId]?.status === "error" && (
+                          <p className="text-xs text-bni-red">
+                            {(insights[m.targetId] as { message: string }).message}
+                            <button
+                              onClick={() => runAiInsight(m.targetId)}
+                              className="ml-2 underline"
+                            >
+                              重試
+                            </button>
+                          </p>
+                        )}
+                        {insights[m.targetId]?.status === "done" && (() => {
+                          const st = insights[m.targetId] as { insight: PairInsight; cached: boolean };
+                          const ai = st.insight;
+                          return (
+                            <div className="rounded-2xl border border-gold-300/50 bg-white/60 p-4">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold tracking-wide text-gold-600">
+                                  ✨ Claude 深度分析
+                                </span>
+                                {st.cached && (
+                                  <span className="text-[10px] text-ink-muted">已快取（不重複計費）</span>
+                                )}
+                              </div>
+                              <p className="mt-2 text-[13px] leading-6 text-ink">{ai.whyMatch}</p>
+                              {ai.coopPlan.length > 0 && (
+                                <ol className="mt-2 list-decimal space-y-1 pl-5 text-[13px] text-ink-soft">
+                                  {ai.coopPlan.map((s, i) => (
+                                    <li key={i}>{s}</li>
+                                  ))}
+                                </ol>
+                              )}
+                              <dl className="mt-3 space-y-2 text-[13px] text-ink-soft">
+                                {ai.referralAtoB && (
+                                  <div><dt className="inline font-semibold text-ink">你介紹給對方：</dt><dd className="inline">{ai.referralAtoB}</dd></div>
+                                )}
+                                {ai.referralBtoA && (
+                                  <div><dt className="inline font-semibold text-ink">對方介紹給你：</dt><dd className="inline">{ai.referralBtoA}</dd></div>
+                                )}
+                                {ai.pitch && (
+                                  <div><dt className="inline font-semibold text-ink">提案切入：</dt><dd className="inline">{ai.pitch}</dd></div>
+                                )}
+                                {ai.icebreaker && (
+                                  <div><dt className="inline font-semibold text-ink">121 開場白：</dt><dd className="inline">「{ai.icebreaker}」</dd></div>
+                                )}
+                              </dl>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </dl>
                   )}
