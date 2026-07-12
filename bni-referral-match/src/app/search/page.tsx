@@ -43,7 +43,7 @@ export default function SearchPage() {
           姓名: m.name,
           公司: m.company,
           產業: [m.industry, ...(Array.isArray(a.s6_industries) ? a.s6_industries : [])].join(" "),
-          服務: [a.s6_intro_60, a.s6_company_line, a.s6_success_case, a.s2_dream_case]
+          服務: [a.s6_intro_60, a.s6_company_line, a.s6_success_case, a.s2_easy_customer, a.s2_when_needed]
             .filter((x) => typeof x === "string")
             .join(" "),
           需求: [
