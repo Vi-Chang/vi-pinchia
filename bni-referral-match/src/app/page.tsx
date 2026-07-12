@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar } from "@/components/ui/Avatar";
+import { SiteFooter } from "@/components/ui/SiteFooter";
 import type { Member } from "@/lib/types";
 
 export default function LoginPage() {
@@ -109,6 +110,7 @@ export default function LoginPage() {
           <p className="mt-4 text-center text-xs text-ink-muted">
             正式環境串接 Supabase Auth（Email 魔法連結／密碼登入）
           </p>
+          <SiteFooter />
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar } from "@/components/ui/Avatar";
+import { SiteFooter } from "@/components/ui/SiteFooter";
 
 const NAV = [
   { href: "/dashboard", label: "首頁", icon: "🏠" },
@@ -106,6 +107,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="px-4 pt-2 sm:px-6 lg:px-8 lg:pt-8">{children}</main>
+        <SiteFooter />
       </div>
 
       {/* 手機底部導覽 */}
