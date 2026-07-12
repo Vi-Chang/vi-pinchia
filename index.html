@@ -159,6 +159,85 @@
     border-left: 4px solid var(--accent);
   }
 
+  .services {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .service-item {
+    background: var(--bg);
+    padding: 22px 24px;
+    border-radius: 16px;
+    border-left: 4px solid var(--accent);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .service-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(201, 111, 66, 0.12);
+  }
+
+  .service-item .s-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .service-item .s-desc {
+    margin-top: 6px;
+    font-size: 14px;
+    color: var(--text-soft);
+    padding-left: 30px;
+  }
+
+  .line-block {
+    text-align: center;
+    background: var(--bg);
+    padding: 30px 26px 34px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+  }
+
+  .line-block .line-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #06c755;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 12px 28px;
+    border-radius: 999px;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(6, 199, 85, 0.3);
+    transition: transform 0.2s ease;
+  }
+
+  .line-block .line-btn:hover { transform: translateY(-2px); }
+
+  .line-block img.qr {
+    width: 200px;
+    max-width: 70%;
+    margin: 22px auto 0;
+    display: block;
+    border-radius: 16px;
+    background: #fff;
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  }
+
+  .line-block .qr-hint {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-soft);
+    letter-spacing: 1px;
+  }
+
   .footer {
     text-align: center;
     padding: 24px;
@@ -203,6 +282,18 @@
         你好，我是張婕。專注於牙體技術領域，帶領品嘉牙體技術所以專業與細心，為每一位客戶打造安心的微笑。生活與工作上，我都相信「簡單」的力量——去蕪存菁，把最重要的事情做到最好。
       </p>
 
+      <p class="section-title" style="margin-top: 36px;">服務項目</p>
+      <div class="services">
+        <div class="service-item">
+          <div class="s-title">🦷 固定假牙製作</div>
+          <div class="s-desc">含牙冠、貼片、客製化植體</div>
+        </div>
+        <div class="service-item">
+          <div class="s-title">🗺️ 雙北客製化牙科行前諮詢與衛教</div>
+          <div class="s-desc">幫你找到屬於你的命定牙醫師</div>
+        </div>
+      </div>
+
       <p class="section-title" style="margin-top: 36px;">聯絡方式</p>
       <div class="info-grid">
         <a class="info-item" href="tel:0966305619">
@@ -219,6 +310,13 @@
             <div class="value">pinchia8860@gmail.com</div>
           </div>
         </a>
+      </div>
+
+      <p class="section-title" style="margin-top: 36px;">加 LINE</p>
+      <div class="line-block">
+        <span class="line-btn">💬 加入 LINE 好友</span>
+        <img class="qr" src="QR.jpg" alt="張婕 LINE QR Code">
+        <p class="qr-hint">開啟 LINE 掃描上方 QR Code 加我好友</p>
       </div>
     </section>
 
