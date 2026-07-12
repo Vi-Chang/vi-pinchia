@@ -22,6 +22,15 @@ export default function MatchesPage() {
   const [scope, setScope] = useState<"all" | "chapter">("all");
   const [open, setOpen] = useState<string | null>(null);
   const [insights, setInsights] = useState<Record<string, InsightState>>({});
+  // 填完交流卡（完成度 >= 80%）才開放配對
+  const [progress, setProgress] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!member) return;
+    fetch(`/api/card?memberId=${member.id}`)
+      .then((r) => r.json())
+      .then((d) => setProgress(d.progress ?? 0));
+  }, [member]);
 
   const runAiInsight = async (targetId: string) => {
     if (!member || insights[targetId]?.status === "loading") return;
@@ -47,12 +56,12 @@ export default function MatchesPage() {
   };
 
   useEffect(() => {
-    if (!member) return;
+    if (!member || progress === null || progress < 80) return;
     setMatches(null);
     fetch(`/api/matches?memberId=${member.id}&scope=${scope}`)
       .then((r) => r.json())
       .then((d) => setMatches(d.matches ?? []));
-  }, [member, scope]);
+  }, [member, scope, progress]);
 
   return (
     <AppShell>
@@ -87,7 +96,20 @@ export default function MatchesPage() {
           </div>
         </div>
 
-        {!matches && (
+        {/* 填完卡才配對 */}
+        {progress !== null && progress < 80 && (
+          <div className="glass animate-fade-up p-10 text-center">
+            <div className="text-4xl">📋</div>
+            <h2 className="mt-3 text-lg font-bold text-ink">先完成交流卡，才能開始 AI 配對</h2>
+            <p className="mt-2 text-sm text-ink-soft">
+              目前完成度 <strong className="text-bni-red">{progress}%</strong>（需達 80%）。
+              交流卡填得越完整，AI 幫你找的合作夥伴越精準。
+            </p>
+            <a href="/card" className="btn-primary mt-5 inline-block">前往填寫交流卡 →</a>
+          </div>
+        )}
+
+        {(progress === null || progress >= 80) && !matches && (
           <div className="glass animate-pulse p-10 text-center text-ink-muted">計算配對中…</div>
         )}
 

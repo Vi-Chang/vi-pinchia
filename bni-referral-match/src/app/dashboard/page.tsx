@@ -83,7 +83,18 @@ export default function DashboardPage() {
               <span className="text-xs text-ink-muted">今天最適合 121 的人</span>
             </div>
 
-            {today ? (
+            {progress < 80 ? (
+              <div className="relative mt-6 rounded-2xl bg-white/50 p-6 text-center">
+                <div className="text-3xl">📋</div>
+                <p className="mt-2 text-sm font-semibold text-ink">先完成交流卡，才能開始 AI 配對</p>
+                <p className="mt-1 text-xs text-ink-soft">
+                  目前完成度 {progress}%（需達 80%）
+                </p>
+                <Link href="/card" className="btn-primary mt-4 inline-block !px-5 !py-2 !text-sm">
+                  前往填寫交流卡 →
+                </Link>
+              </div>
+            ) : today ? (
               <div className="relative mt-5">
                 <div className="flex items-center gap-4">
                   <Avatar name={today.target.name} color={today.target.color} size={56} />
@@ -125,7 +136,12 @@ export default function DashboardPage() {
               💡 合作建議
             </h2>
             <ul className="mt-4 space-y-3">
-              {goodMatches.slice(1, 5).map((m) => (
+              {progress < 80 && (
+                <li className="rounded-2xl bg-white/40 p-4 text-sm text-ink-muted">
+                  完成交流卡後，這裡會列出 AI 找到的合作夥伴。
+                </li>
+              )}
+              {progress >= 80 && goodMatches.slice(1, 5).map((m) => (
                 <li key={m.targetId}>
                   <Link
                     href="/matches"
