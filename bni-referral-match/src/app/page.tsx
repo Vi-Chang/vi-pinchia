@@ -7,11 +7,32 @@ import { Avatar } from "@/components/ui/Avatar";
 import { SiteFooter } from "@/components/ui/SiteFooter";
 import type { Member } from "@/lib/types";
 
+const ACCESS_CODE = "3345678";
+const GATE_KEY = "brm-gate-ok";
+
 export default function LoginPage() {
   const { member, loading, login } = useAuth();
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [picked, setPicked] = useState<string>("");
+  const [gateOk, setGateOk] = useState(false);
+  const [code, setCode] = useState("");
+  const [codeError, setCodeError] = useState("");
+
+  useEffect(() => {
+    // 初次使用需輸入通行密碼；通過後記住這台裝置
+    setGateOk(localStorage.getItem(GATE_KEY) === "1");
+  }, []);
+
+  const checkCode = () => {
+    if (code === ACCESS_CODE) {
+      localStorage.setItem(GATE_KEY, "1");
+      setGateOk(true);
+      setCodeError("");
+    } else {
+      setCodeError("密碼不正確，請洽分會管理員");
+    }
+  };
 
   useEffect(() => {
     if (!loading && member) router.replace("/dashboard");
@@ -65,48 +86,76 @@ export default function LoginPage() {
         {/* 登入區 */}
         <div className="glass-strong flex flex-col justify-center p-8 lg:p-10">
           <h2 className="text-xl font-bold text-ink">會員登入</h2>
-          <p className="mt-1 text-sm text-ink-muted">
-            示範模式：選擇一位會員身分即可體驗完整功能
-          </p>
 
-          <div className="mt-6 max-h-72 space-y-2 overflow-y-auto pr-1">
-            {members.length === 0 && (
-              <div className="animate-pulse rounded-2xl bg-white/50 p-4 text-sm text-ink-muted">
-                載入會員名單中…
-              </div>
-            )}
-            {members.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => setPicked(m.id)}
-                className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ${
-                  picked === m.id
-                    ? "border-bni-red bg-white shadow-glass"
-                    : "border-transparent bg-white/40 hover:bg-white/70"
-                }`}
-              >
-                <Avatar name={m.name} color={m.color} size={40} />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-semibold text-ink">
-                    {m.name}
-                    {m.role === "admin" && <span className="tag-red ml-2">管理員</span>}
-                  </div>
-                  <div className="truncate text-xs text-ink-muted">
-                    {m.company} · {m.industry}
-                  </div>
-                </div>
-                {picked === m.id && <span className="text-bni-red">✓</span>}
+          {!gateOk ? (
+            <>
+              {/* 初次使用通行密碼 */}
+              <p className="mt-1 text-sm text-ink-muted">
+                初次使用請輸入通行密碼（洽分會管理員索取）
+              </p>
+              <input
+                type="password"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value);
+                  setCodeError("");
+                }}
+                onKeyDown={(e) => e.key === "Enter" && checkCode()}
+                placeholder="請輸入通行密碼"
+                className="field mt-6"
+                autoFocus
+              />
+              {codeError && <p className="mt-2 text-sm text-bni-red">{codeError}</p>}
+              <button onClick={checkCode} className="btn-primary mt-4 w-full">
+                驗證 →
               </button>
-            ))}
-          </div>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-ink-muted">
+                示範模式：選擇一位會員身分即可體驗完整功能
+              </p>
 
-          <button
-            onClick={enter}
-            disabled={!picked && members.length === 0}
-            className="btn-primary mt-6 w-full disabled:opacity-40"
-          >
-            進入平台 →
-          </button>
+              <div className="mt-6 max-h-72 space-y-2 overflow-y-auto pr-1">
+                {members.length === 0 && (
+                  <div className="animate-pulse rounded-2xl bg-white/50 p-4 text-sm text-ink-muted">
+                    載入會員名單中…
+                  </div>
+                )}
+                {members.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setPicked(m.id)}
+                    className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ${
+                      picked === m.id
+                        ? "border-bni-red bg-white shadow-glass"
+                        : "border-transparent bg-white/40 hover:bg-white/70"
+                    }`}
+                  >
+                    <Avatar name={m.name} color={m.color} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-semibold text-ink">
+                        {m.name}
+                        {m.role === "admin" && <span className="tag-red ml-2">管理員</span>}
+                      </div>
+                      <div className="truncate text-xs text-ink-muted">
+                        {m.company} · {m.industry}
+                      </div>
+                    </div>
+                    {picked === m.id && <span className="text-bni-red">✓</span>}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={enter}
+                disabled={!picked && members.length === 0}
+                className="btn-primary mt-6 w-full disabled:opacity-40"
+              >
+                進入平台 →
+              </button>
+            </>
+          )}
           <p className="mt-4 text-center text-xs text-ink-muted">
             正式環境串接 Supabase Auth（Email 魔法連結／密碼登入）
           </p>
