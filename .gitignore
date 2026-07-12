@@ -4,3 +4,6 @@ Thumbs.db
 .claude/
 data/
 *.db
+.env
+.env.*
+!.env.example
