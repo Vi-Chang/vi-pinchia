@@ -160,7 +160,14 @@ function CardEditor() {
 
           <div className="space-y-9">
             {section.questions.map((q) => (
-              <QuestionField key={q.id} q={q} value={answers[q.id]} onChange={(v) => set(q.id, v)} />
+              <QuestionField
+                key={q.id}
+                q={q}
+                value={answers[q.id]}
+                onChange={(v) => set(q.id, v)}
+                otherValue={answers[`${q.id}_other`]}
+                onOtherChange={(v) => set(`${q.id}_other`, v)}
+              />
             ))}
           </div>
 
@@ -192,11 +199,16 @@ function QuestionField({
   q,
   value,
   onChange,
+  otherValue,
+  onOtherChange,
 }: {
   q: Question;
   value: Answer | undefined;
   onChange: (v: Answer) => void;
+  otherValue?: Answer;
+  onOtherChange?: (v: Answer) => void;
 }) {
+  const otherChecked = q.allowOther && answerAsArray(value).includes("其他");
   return (
     <div>
       <label className="label">{q.label}</label>
@@ -208,7 +220,18 @@ function QuestionField({
         <RadioGroup value={answerAsString(value)} options={q.options ?? []} onChange={onChange} />
       )}
       {q.type === "checkbox" && (
-        <CheckboxGroup value={answerAsArray(value)} options={q.options ?? []} onChange={onChange} />
+        <>
+          <CheckboxGroup value={answerAsArray(value)} options={q.options ?? []} onChange={onChange} />
+          {otherChecked && onOtherChange && (
+            <input
+              className="field mt-3"
+              value={answerAsString(otherValue)}
+              onChange={(e) => onOtherChange(e.target.value)}
+              placeholder="請填寫其他回饋模式…"
+              maxLength={50}
+            />
+          )}
+        </>
       )}
       {q.type === "checkbox-percent" && (
         <CheckboxPercent value={answerAsPercent(value)} options={q.options ?? []} onChange={onChange} />

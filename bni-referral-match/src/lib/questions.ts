@@ -14,6 +14,8 @@ export interface Question {
   placeholder?: string;
   maxLength?: number;
   helper?: string;
+  /** 勾選「其他」時顯示自由填寫欄（存於 `${id}_other`） */
+  allowOther?: boolean;
 }
 
 export interface Section {
@@ -255,9 +257,10 @@ export const SECTIONS: Section[] = [
       },
       {
         id: "s4_profit_model",
-        label: "偏好的合作回饋模式",
-        type: "radio",
-        options: ["固定介紹費", "成交比例分潤", "互惠引薦（不分潤）", "依專案個別議定"],
+        label: "偏好的合作回饋模式（可複選）",
+        type: "checkbox",
+        options: ["轉介客戶", "資源共享", "異業活動", "專業諮詢", "優惠方案", "其他"],
+        allowOther: true,
       },
     ],
   },
