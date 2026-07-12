@@ -20,7 +20,10 @@ import {
 } from "@/components/form/controls";
 import { useAutosave } from "@/hooks/useAutosave";
 import { SECTIONS, type Question } from "@/lib/questions";
-import type { Answer } from "@/lib/types";
+import type { CoopSuggestion } from "@/lib/suggestions";
+import type { Answer, MatchResult, Member } from "@/lib/types";
+
+type MatchRec = MatchResult & { target: Member; suggestion?: CoopSuggestion };
 
 export default function CardPage() {
   return (
@@ -76,6 +79,24 @@ function CardEditor() {
   }, [active]);
 
   const section = SECTIONS[active];
+
+  // 進入第五部分（30 天行動計畫）前，先給 AI 媒合結果與提案建議
+  const [recs, setRecs] = useState<MatchRec[] | null>(null);
+  useEffect(() => {
+    if (!member || section.id !== "s5" || recs !== null) return;
+    fetch(`/api/matches?memberId=${member.id}&scope=all`)
+      .then((r) => r.json())
+      .then((d) => setRecs((d.matches ?? []).slice(0, 4)))
+      .catch(() => setRecs([]));
+  }, [member, section.id, recs]);
+
+  /** 一鍵把推薦夥伴加進 121 名單（s5_121_list） */
+  const addToList = (r: MatchRec) => {
+    const entry = `${r.target.name}（${r.target.industry}）`;
+    const cur = typeof answers.s5_121_list === "string" ? answers.s5_121_list.trim() : "";
+    if (cur.includes(r.target.name)) return;
+    set("s5_121_list", cur ? `${cur}、${entry}` : entry);
+  };
 
   const sectionDone = useMemo(
     () =>
@@ -152,6 +173,62 @@ function CardEditor() {
             );
           })}
         </div>
+
+        {/* 第五部分前：AI 媒合結果＋提案建議 */}
+        {section.id === "s5" && (
+          <div className="glass animate-fade-up p-7">
+            <h2 className="text-lg font-bold text-ink">🤖 AI 已根據你前四部分的內容完成媒合</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              先看看最值得安排 121 的夥伴與提案建議，再規劃你的 30 天行動。
+            </p>
+            {recs === null && (
+              <div className="mt-4 animate-pulse rounded-2xl bg-white/50 p-4 text-sm text-ink-muted">
+                AI 媒合計算中…
+              </div>
+            )}
+            {recs !== null && recs.length === 0 && (
+              <div className="mt-4 rounded-2xl bg-white/50 p-4 text-sm text-ink-muted">
+                目前媒合訊號較少——前四部分填得越完整，推薦越精準。
+              </div>
+            )}
+            <div className="mt-4 space-y-3">
+              {recs?.map((r) => {
+                const added =
+                  typeof answers.s5_121_list === "string" &&
+                  answers.s5_121_list.includes(r.target.name);
+                return (
+                  <div key={r.targetId} className="rounded-2xl bg-white/50 p-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-bold text-ink">{r.target.name}</span>
+                        <span className="ml-2 text-xs text-ink-muted">
+                          {r.target.company} · {r.target.industry}
+                        </span>
+                      </div>
+                      <span className="text-lg font-bold text-bni-red">{r.probability}%</span>
+                      <button
+                        onClick={() => addToList(r)}
+                        disabled={added}
+                        className="chip !text-xs disabled:opacity-50"
+                      >
+                        {added ? "✓ 已在名單" : "＋ 加入 121 名單"}
+                      </button>
+                    </div>
+                    {r.reasons[0] && (
+                      <p className="mt-2 text-[13px] text-ink-soft">◆ {r.reasons[0]}</p>
+                    )}
+                    {r.suggestion?.pitch && (
+                      <p className="mt-1 text-[13px] text-ink-soft">
+                        <span className="font-semibold text-ink">提案建議：</span>
+                        {r.suggestion.pitch}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* 題目卡片 */}
         <div key={section.id} className="glass animate-fade-up p-7 lg:p-9">
