@@ -1,5 +1,5 @@
 const express = require('express');
-const Database = require('better-sqlite3');
+const { DatabaseSync } = require('node:sqlite');
 const path = require('path');
 const fs = require('fs');
 
@@ -7,8 +7,8 @@ const fs = require('fs');
 const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 
-const db = new Database(path.join(dataDir, 'guestbook.db'));
-db.pragma('journal_mode = WAL');
+const db = new DatabaseSync(path.join(dataDir, 'guestbook.db'));
+db.exec('PRAGMA journal_mode = WAL');
 db.exec(`
   CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,14 +18,12 @@ db.exec(`
   )
 `);
 
-const listStmt = db.prepare('SELECT id, name, message, created_at FROM messages ORDER BY id DESC LIMIT 100');
-const insertStmt = db.prepare('INSERT INTO messages (name, message) VALUES (?, ?)');
-
 const app = express();
 app.use(express.json());
 
 app.get('/api/messages', (req, res) => {
-  res.json(listStmt.all());
+  const rows = db.prepare('SELECT id, name, message, created_at FROM messages ORDER BY id DESC LIMIT 100').all();
+  res.json(rows);
 });
 
 app.post('/api/messages', (req, res) => {
@@ -42,7 +40,7 @@ app.post('/api/messages', (req, res) => {
     return res.status(400).json({ error: '留言最多 200 個字' });
   }
 
-  const info = insertStmt.run(name, message);
+  const info = db.prepare('INSERT INTO messages (name, message) VALUES (?, ?)').run(name, message);
   const row = db.prepare('SELECT id, name, message, created_at FROM messages WHERE id = ?').get(info.lastInsertRowid);
   res.status(201).json(row);
 });
