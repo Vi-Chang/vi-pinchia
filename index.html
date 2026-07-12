@@ -238,6 +238,78 @@
     letter-spacing: 1px;
   }
 
+  .hero .tags {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero .tags span {
+    background: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 4px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .work-sub {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent-deep);
+    margin-bottom: 14px;
+  }
+
+  .video-grid {
+    display: grid;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .video-embed {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .video-embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+
+  .gallery a {
+    display: block;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(201, 111, 66, 0.14);
+  }
+
+  .gallery img {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s ease;
+  }
+
+  .gallery a:hover img { transform: scale(1.06); }
+
   .footer {
     text-align: center;
     padding: 24px;
@@ -254,6 +326,11 @@
       <img class="avatar" src="250618-084-2.jpg" alt="張婕的照片">
       <h1>張婕</h1>
       <p class="role">品嘉牙體技術所　總監</p>
+      <div class="tags">
+        <span># 牙體技術</span>
+        <span># 牙科</span>
+        <span># 美學</span>
+      </div>
     </header>
 
     <section class="body">
@@ -279,7 +356,7 @@
 
       <p class="section-title">自我介紹</p>
       <p class="about">
-        你好，我是張婕。專注於牙體技術領域，帶領品嘉牙體技術所以專業與細心，為每一位客戶打造安心的微笑。生活與工作上，我都相信「簡單」的力量——去蕪存菁，把最重要的事情做到最好。
+        很多人都說，認識張婕之後，聊天時都會忍不住看別人的牙齒。因為一口好牙，不只是健康，更是自信與笑容的關鍵。我是齒模假牙美學代表張婕——無論是植牙、牙套、全瓷冠或美白貼片，我都能協助您找到適合的牙醫師，並打造兼具功能、美學與耐用性的假牙。<br><br><strong>您的笑容，我來雕刻。</strong>
       </p>
 
       <p class="section-title" style="margin-top: 36px;">服務項目</p>
@@ -294,13 +371,41 @@
         </div>
       </div>
 
+      <p class="section-title" style="margin-top: 36px;">作品 · 案例</p>
+      <div class="works">
+        <div class="work-sub">🎬 患者自述：改變自信</div>
+        <div class="video-grid">
+          <div class="video-embed">
+            <iframe src="https://www.youtube.com/embed/9pId-9GKZmA" title="患者自述：改變自信" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+          <div class="video-embed">
+            <iframe src="https://www.youtube.com/embed/82iLQFToTzs" title="患者自述：改變自信" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+        <div class="gallery">
+          <a href="https://petnruqcyhnfylfwbzxt.supabase.co/storage/v1/object/public/contact-interaction-images/0a8d993e-8517-4c08-9899-33f7d33cd80f/card/img-0-d585122a-72e5-40ab-8760-5409e906eaf6.jpg" target="_blank" rel="noopener">
+            <img src="https://petnruqcyhnfylfwbzxt.supabase.co/storage/v1/object/public/contact-interaction-images/0a8d993e-8517-4c08-9899-33f7d33cd80f/card/img-0-d585122a-72e5-40ab-8760-5409e906eaf6.jpg" alt="作品照片 1" loading="lazy">
+          </a>
+          <a href="https://petnruqcyhnfylfwbzxt.supabase.co/storage/v1/object/public/contact-interaction-images/0a8d993e-8517-4c08-9899-33f7d33cd80f/card/block-img-96732052-8a51-4aeb-9234-385309753a7d-5378edd5-133a-4f11-b32c-28fc50bf1ca7.jpg" target="_blank" rel="noopener">
+            <img src="https://petnruqcyhnfylfwbzxt.supabase.co/storage/v1/object/public/contact-interaction-images/0a8d993e-8517-4c08-9899-33f7d33cd80f/card/block-img-96732052-8a51-4aeb-9234-385309753a7d-5378edd5-133a-4f11-b32c-28fc50bf1ca7.jpg" alt="作品照片 2" loading="lazy">
+          </a>
+        </div>
+      </div>
+
       <p class="section-title" style="margin-top: 36px;">聯絡方式</p>
       <div class="info-grid">
         <a class="info-item" href="tel:0966305619">
+          <div class="info-icon">📱</div>
+          <div class="info-text">
+            <div class="label">手機</div>
+            <div class="value">0966-305619</div>
+          </div>
+        </a>
+        <a class="info-item" href="tel:0222858381">
           <div class="info-icon">📞</div>
           <div class="info-text">
-            <div class="label">電話</div>
-            <div class="value">0966305619</div>
+            <div class="label">市話</div>
+            <div class="value">02-2285-8381</div>
           </div>
         </a>
         <a class="info-item" href="mailto:pinchia8860@gmail.com">
@@ -314,7 +419,7 @@
 
       <p class="section-title" style="margin-top: 36px;">加 LINE</p>
       <div class="line-block">
-        <span class="line-btn">💬 加入 LINE 好友</span>
+        <a class="line-btn" href="https://line.me/R/ti/p/@642wlcgk" target="_blank" rel="noopener">💬 加入 LINE 好友</a>
         <img class="qr" src="QR.jpg" alt="張婕 LINE QR Code">
         <p class="qr-hint">開啟 LINE 掃描上方 QR Code 加我好友</p>
       </div>
