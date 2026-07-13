@@ -479,7 +479,7 @@ export async function getReminders(memberId: string): Promise<Reminder[]> {
         kind: "project_expired",
         message: `主推專案「${p.name}」已超過結束日期（${p.endDate}）。是否建立新的專案？`,
         actionLabel: "建立新的專案",
-        actionHref: "/projects",
+        actionHref: "/plaza",
       });
     }
   }
@@ -688,7 +688,6 @@ export async function deleteMember(
   if (id === requesterId) return { ok: false, error: "無法刪除自己的帳號" };
   const target = store.members.find((m) => m.id === id);
   if (!target) return { ok: false, error: "找不到這位會員" };
-  if (target.role === "admin") return { ok: false, error: "無法刪除其他管理員" };
   store.members = store.members.filter((m) => m.id !== id);
   store.accounts = store.accounts.filter((a) => a.memberId !== id);
   store.versions = store.versions.filter((v) => v.memberId !== id);
@@ -697,6 +696,22 @@ export async function deleteMember(
   store.interactions = store.interactions.filter((i) => i.fromId !== id && i.toId !== id);
   store.alerts = store.alerts.filter((a) => !a.memberIds.includes(id));
   return { ok: true };
+}
+
+/** 管理員開通／收回其他會員的管理員權限 */
+export async function setMemberRole(
+  id: string,
+  role: "member" | "admin",
+  requesterId: string
+): Promise<{ ok: boolean; member?: Member; error?: string }> {
+  const store = demoStore();
+  const requester = store.members.find((m) => m.id === requesterId);
+  if (requester?.role !== "admin") return { ok: false, error: "僅管理員可調整權限" };
+  if (id === requesterId) return { ok: false, error: "無法調整自己的權限" };
+  const target = store.members.find((m) => m.id === id);
+  if (!target) return { ok: false, error: "找不到這位會員" };
+  target.role = role;
+  return { ok: true, member: target };
 }
 
 /* ═══════════ 商機廣場（Opportunity Plaza） ═══════════ */

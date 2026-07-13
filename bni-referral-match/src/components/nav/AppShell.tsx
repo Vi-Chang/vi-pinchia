@@ -12,7 +12,7 @@ const NAV = [
   { href: "/plaza", label: "商機廣場", icon: "🏪" },
   { href: "/cards", label: "交流卡管理", icon: "🗂️" },
   { href: "/card", label: "填寫交流卡", icon: "📋" },
-  { href: "/projects", label: "專案", icon: "📁" },
+  { href: "/members", label: "會員資料", icon: "👥" },
   { href: "/alerts", label: "商機快訊", icon: "🔔" },
   { href: "/matches", label: "商機配對", icon: "💎" },
   { href: "/analysis", label: "AI 分析", icon: "🤖" },
