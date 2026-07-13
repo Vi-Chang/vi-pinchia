@@ -1,0 +1,23 @@
+# 商務夥伴商機交流平台 — 開發規範
+
+## 🔒 資料保全鐵律（最高優先，任何變更都必須遵守）
+
+1. **絕不刪除已註冊的會員**（`members` / `accounts` 資料列）。
+2. **絕不刪除已填寫的交流卡版本**（`card_versions` 資料列），包括舊版本與歷史紀錄。
+
+具體規則：
+- 修改問卷、頁面、功能時只改「定義」（questions.ts、UI、API 邏輯），**不得**寫任何刪除或重置 Supabase 資料的遷移、腳本或程式路徑。
+- 題目改型別或改名時，舊答案的 key 原樣保留在 `answers` JSON 中（未知 key 無害，不做清洗）。
+- 示範資料種子**只在 members 表完全為空時**執行；資料庫非空時絕不重新植入或覆蓋。
+- 例外（允許的刪除）僅限兩種：
+  - 使用者本人或管理員在 UI 上**主動**執行的刪除
+  - 範例人物（`is_demo = true`）在真實填卡人數超過 5 人時的自動退場
+
+## 架構速覽
+
+- **儲存**：Supabase（write-through）——啟動時載入整份資料到記憶體，讀取走記憶體，變更即時寫回；未設金鑰時退回記憶體示範模式。
+- **AI 成本控管**：配對/搜尋/統計一律走本地規則引擎（零 API 成本）；只有使用者點「AI 深度分析」才呼叫 Anthropic API，且結果快取。
+- **金鑰**：`.env`（git 忽略）與 Zeabur 環境變數；絕不入版控。
+- **部署**：Zeabur service `6a533de6b421dcaba7ae31ac`（project `6a530c22723d6cf6efafa931`），網址 https://referralengine.zeabur.app
+- **同步**：主 repo `vi-pinchia`（子目錄）+ `git subtree split` 推到獨立 repo `BNI-MatchEngine`。
+- **管理員**：pinchia8860@gmail.com（唯一初始 admin，可開通他人）。
