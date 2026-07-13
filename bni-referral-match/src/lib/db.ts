@@ -15,13 +15,15 @@ import type {
 } from "./types";
 
 /**
- * 資料存取層。
- * - 設定 Supabase 環境變數時 → 走 Supabase（Postgres）
- * - 未設定時 → 走內建示範資料（記憶體儲存，可完整預覽所有功能）
+ * 資料存取層（規則引擎 + 永久儲存）。
+ *
+ * - 未設定 Supabase → 純記憶體示範模式（重啟即重置）
+ * - 設定 Supabase（NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY）→
+ *   啟動時把整個資料集載入記憶體（首次自動植入示範資料），
+ *   所有讀取走記憶體（規則引擎零延遲），所有變更即時寫回 Supabase（永久保存）。
  *
  * 「動態商業檔案」：交流卡以多版本（CardVersion）保存，
- * 使用中（active）版本即對外的最新需求，AI 分析與媒合預設採用它；
- * 歷史版本完整保留，可隨時查看需求變化。
+ * 使用中（active）版本即對外的最新需求，AI 分析與媒合預設採用它。
  */
 
 interface Account {
@@ -43,12 +45,54 @@ interface Store {
 
 declare global {
   // eslint-disable-next-line no-var
-  var __brmStore: Store | undefined;
+  var __brmStorePromise: Promise<Store> | undefined;
+}
+
+export function hasSupabase(): boolean {
+  return Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
+async function supabaseAdmin() {
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
 }
 
 function nameOf(members: Member[], id: string): string {
   return members.find((m) => m.id === id)?.name ?? id;
 }
+
+function hashPassword(password: string, salt: string): string {
+  return createHash("sha256").update(`${salt}:${password}`).digest("hex");
+}
+
+/* ═══════════ 示範資料種子 ═══════════ */
+
+/** 示範會員帳號的預設密碼 */
+const DEMO_PASSWORD = "demo1234";
+
+/** 平台管理員（張婕） */
+const ADMIN_MEMBER: Member = {
+  id: "admin-vi",
+  name: "張婕",
+  company: "品嘉牙體技術所",
+  industry: "醫療健康",
+  chapter: "長城鈦金分會",
+  title: "總監",
+  phone: "0966-305619",
+  line: "",
+  email: "pinchia8860@gmail.com",
+  role: "admin",
+  color: "#c8102e",
+  media: {},
+  onboarded: true,
+};
+const ADMIN_PASSWORD = "3345678";
 
 /** 由示範交流卡衍生版本資料：每人 v1（使用中），m1 另有三版歷程示範 */
 function seedVersions(members: Member[]): CardVersion[] {
@@ -70,7 +114,6 @@ function seedVersions(members: Member[]): CardVersion[] {
       updatedBy: who,
     });
   }
-  // m1 的版本歷程示範（已完成的舊版本）
   const m1 = DEMO_CARDS.find((c) => c.memberId === "m1")!;
   const m1Name = nameOf(members, "m1");
   versions.unshift(
@@ -109,31 +152,6 @@ function seedVersions(members: Member[]): CardVersion[] {
   return versions;
 }
 
-function hashPassword(password: string, salt: string): string {
-  return createHash("sha256").update(`${salt}:${password}`).digest("hex");
-}
-
-/** 示範會員帳號的預設密碼 */
-const DEMO_PASSWORD = "demo1234";
-
-/** 平台管理員（僅此帳號可刪除其他會員的資訊） */
-const ADMIN_MEMBER: Member = {
-  id: "admin-vi",
-  name: "張婕",
-  company: "品嘉牙體技術所",
-  industry: "醫療健康",
-  chapter: "長城鈦金分會",
-  title: "總監",
-  phone: "0966-305619",
-  line: "",
-  email: "pinchia8860@gmail.com",
-  role: "admin",
-  color: "#c8102e",
-  media: {},
-  onboarded: true,
-};
-const ADMIN_PASSWORD = "3345678";
-
 function seedOpportunities(): Opportunity[] {
   const mk = (
     id: string,
@@ -153,42 +171,252 @@ function seedOpportunities(): Opportunity[] {
   ];
 }
 
-function demoStore(): Store {
-  if (!globalThis.__brmStore) {
-    const members = structuredClone(DEMO_MEMBERS);
-    for (const m of members) {
-      m.onboarded = true; // 示範會員已有完整交流卡
-      m.isDemo = true; // 範例人物：真實填卡人數超過 5 人時自動移除
-    }
-    const accounts = members.map((m) => {
-      const salt = randomBytes(8).toString("hex");
-      return { email: m.email.toLowerCase(), memberId: m.id, salt, passwordHash: hashPassword(DEMO_PASSWORD, salt) };
-    });
-    // 管理員帳號（張婕）
-    members.push(structuredClone(ADMIN_MEMBER));
-    const adminSalt = randomBytes(8).toString("hex");
-    accounts.push({
-      email: ADMIN_MEMBER.email.toLowerCase(),
-      memberId: ADMIN_MEMBER.id,
-      salt: adminSalt,
-      passwordHash: hashPassword(ADMIN_PASSWORD, adminSalt),
-    });
-    globalThis.__brmStore = {
-      members,
-      interactions: structuredClone(DEMO_INTERACTIONS),
-      versions: seedVersions(members),
-      projects: structuredClone(DEMO_PROJECTS),
-      alerts: [],
-      accounts,
-      opportunities: seedOpportunities(),
-    };
+function buildSeedStore(): Store {
+  const members = structuredClone(DEMO_MEMBERS);
+  for (const m of members) {
+    m.onboarded = true; // 示範會員已有完整交流卡
+    m.isDemo = true; // 範例人物：真實填卡人數超過 5 人時自動移除
   }
-  return globalThis.__brmStore;
+  const accounts = members.map((m) => {
+    const salt = randomBytes(8).toString("hex");
+    return { email: m.email.toLowerCase(), memberId: m.id, salt, passwordHash: hashPassword(DEMO_PASSWORD, salt) };
+  });
+  // 管理員帳號（張婕）
+  members.push(structuredClone(ADMIN_MEMBER));
+  const adminSalt = randomBytes(8).toString("hex");
+  accounts.push({
+    email: ADMIN_MEMBER.email.toLowerCase(),
+    memberId: ADMIN_MEMBER.id,
+    salt: adminSalt,
+    passwordHash: hashPassword(ADMIN_PASSWORD, adminSalt),
+  });
+  return {
+    members,
+    interactions: structuredClone(DEMO_INTERACTIONS),
+    versions: seedVersions(members),
+    projects: structuredClone(DEMO_PROJECTS),
+    alerts: [],
+    accounts,
+    opportunities: seedOpportunities(),
+  };
+}
+
+/* ═══════════ Supabase 列與物件互轉 ═══════════ */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+function memberToRow(m: Member): any {
+  return {
+    id: m.id, name: m.name, company: m.company, industry: m.industry, chapter: m.chapter,
+    title: m.title, phone: m.phone, line: m.line, email: m.email,
+    website: m.website ?? null, facebook: m.facebook ?? null, instagram: m.instagram ?? null,
+    linkedin: m.linkedin ?? null, role: m.role, color: m.color, media: m.media,
+    onboarded: m.onboarded ?? false, is_demo: m.isDemo ?? false,
+  };
+}
+function rowToMember(r: any): Member {
+  return {
+    id: r.id, name: r.name, company: r.company ?? "", industry: r.industry ?? "",
+    chapter: r.chapter ?? "", title: r.title ?? "", phone: r.phone ?? "", line: r.line ?? "",
+    email: r.email ?? "", website: r.website ?? undefined, facebook: r.facebook ?? undefined,
+    instagram: r.instagram ?? undefined, linkedin: r.linkedin ?? undefined,
+    role: r.role ?? "member", color: r.color ?? "#c8102e", media: r.media ?? {},
+    onboarded: r.onboarded ?? false, isDemo: r.is_demo ?? false,
+  };
+}
+function accountToRow(a: Account): any {
+  return { email: a.email, member_id: a.memberId, password_hash: a.passwordHash, salt: a.salt };
+}
+function rowToAccount(r: any): Account {
+  return { email: r.email, memberId: r.member_id, passwordHash: r.password_hash, salt: r.salt };
+}
+function versionToRow(v: CardVersion): any {
+  return {
+    id: v.id, member_id: v.memberId, version: v.version, title: v.title, answers: v.answers,
+    status: v.status, created_at: v.createdAt, updated_at: v.updatedAt,
+    created_by: v.createdBy, updated_by: v.updatedBy,
+  };
+}
+function rowToVersion(r: any): CardVersion {
+  return {
+    id: r.id, memberId: r.member_id, version: r.version, title: r.title ?? "",
+    answers: r.answers ?? {}, status: r.status ?? "draft", createdAt: r.created_at,
+    updatedAt: r.updated_at, createdBy: r.created_by ?? "", updatedBy: r.updated_by ?? "",
+  };
+}
+function projectToRow(p: Project): any {
+  return {
+    id: p.id, member_id: p.memberId, name: p.name, intro: p.intro,
+    ideal_referrals: p.idealReferrals, industries_needed: p.industriesNeeded,
+    resources_offered: p.resourcesOffered, expected_close: p.expectedClose,
+    start_date: p.startDate, end_date: p.endDate, is_main: p.isMain,
+    importance: p.importance, created_at: p.createdAt, updated_at: p.updatedAt,
+  };
+}
+function rowToProject(r: any): Project {
+  return {
+    id: r.id, memberId: r.member_id, name: r.name ?? "", intro: r.intro ?? "",
+    idealReferrals: r.ideal_referrals ?? "", industriesNeeded: r.industries_needed ?? [],
+    resourcesOffered: r.resources_offered ?? "", expectedClose: r.expected_close ?? "",
+    startDate: r.start_date ?? "", endDate: r.end_date ?? "", isMain: r.is_main ?? false,
+    importance: r.importance ?? 3, createdAt: r.created_at, updatedAt: r.updated_at,
+  };
+}
+function opportunityToRow(o: Opportunity): any {
+  return {
+    id: o.id, member_id: o.memberId, title: o.title, content: o.content, type: o.type,
+    status: o.status, created_at: o.createdAt, updated_at: o.updatedAt,
+    is_template: o.isTemplate ?? false,
+  };
+}
+function rowToOpportunity(r: any): Opportunity {
+  return {
+    id: r.id, memberId: r.member_id, title: r.title ?? "", content: r.content ?? "",
+    type: r.type ?? "其他", status: r.status ?? "open", createdAt: r.created_at,
+    updatedAt: r.updated_at, isTemplate: r.is_template ?? false,
+  };
+}
+function interactionToRow(i: Interaction): any {
+  return {
+    id: i.id, type: i.type, from_id: i.fromId, to_id: i.toId, date: i.date,
+    note: i.note ?? null, amount: i.amount ?? null, closed: i.closed ?? null,
+  };
+}
+function rowToInteraction(r: any): Interaction {
+  return {
+    id: r.id, type: r.type, fromId: r.from_id, toId: r.to_id, date: r.date,
+    note: r.note ?? undefined, amount: r.amount != null ? Number(r.amount) : undefined,
+    closed: r.closed ?? undefined,
+  };
+}
+function alertToRow(a: BizAlert): any {
+  return {
+    id: a.id, member_ids: a.memberIds, pair: a.pair, probability: a.probability,
+    reasons: a.reasons, trigger: a.trigger, created_at: a.createdAt,
+  };
+}
+function rowToAlert(r: any): BizAlert {
+  return {
+    id: r.id, memberIds: r.member_ids ?? [], pair: r.pair ?? {}, probability: r.probability ?? 0,
+    reasons: r.reasons ?? [], trigger: r.trigger ?? "", createdAt: r.created_at,
+  };
+}
+
+/* ═══════════ 寫回 Supabase（write-through；示範模式為 no-op） ═══════════ */
+
+async function persist(table: string, row: any): Promise<void> {
+  if (!hasSupabase()) return;
+  try {
+    const sb = await supabaseAdmin();
+    const { error } = await sb.from(table).upsert(row);
+    if (error) console.error(`[supabase] upsert ${table} failed:`, error.message);
+  } catch (e) {
+    console.error(`[supabase] upsert ${table} failed:`, e);
+  }
+}
+
+async function persistMany(table: string, rows: any[]): Promise<void> {
+  if (!hasSupabase() || rows.length === 0) return;
+  try {
+    const sb = await supabaseAdmin();
+    const { error } = await sb.from(table).upsert(rows);
+    if (error) console.error(`[supabase] bulk upsert ${table} failed:`, error.message);
+  } catch (e) {
+    console.error(`[supabase] bulk upsert ${table} failed:`, e);
+  }
+}
+
+async function removeRows(table: string, column: string, values: string[]): Promise<void> {
+  if (!hasSupabase() || values.length === 0) return;
+  try {
+    const sb = await supabaseAdmin();
+    const { error } = await sb.from(table).delete().in(column, values);
+    if (error) console.error(`[supabase] delete ${table} failed:`, error.message);
+  } catch (e) {
+    console.error(`[supabase] delete ${table} failed:`, e);
+  }
+}
+
+/* ═══════════ 啟動載入 ═══════════ */
+
+async function loadFromSupabase(): Promise<Store> {
+  const sb = await supabaseAdmin();
+  const [members, accounts, versions, projects, opportunities, interactions, alerts] =
+    await Promise.all([
+      sb.from("members").select("*"),
+      sb.from("accounts").select("*"),
+      sb.from("card_versions").select("*"),
+      sb.from("projects").select("*"),
+      sb.from("opportunities").select("*"),
+      sb.from("interactions").select("*"),
+      sb.from("biz_alerts").select("*"),
+    ]);
+  for (const r of [members, accounts, versions, projects, opportunities, interactions, alerts]) {
+    if (r.error) throw new Error(`Supabase 載入失敗：${r.error.message}（請確認已執行 supabase/schema.sql）`);
+  }
+
+  // 首次啟動（資料庫為空）→ 植入示範資料
+  if ((members.data ?? []).length === 0) {
+    const seed = buildSeedStore();
+    await persistMany("members", seed.members.map(memberToRow));
+    await persistMany("accounts", seed.accounts.map(accountToRow));
+    await persistMany("card_versions", seed.versions.map(versionToRow));
+    await persistMany("projects", seed.projects.map(projectToRow));
+    await persistMany("opportunities", seed.opportunities.map(opportunityToRow));
+    await persistMany("interactions", seed.interactions.map(interactionToRow));
+    console.log("[supabase] 資料庫為空，已植入示範資料");
+    return seed;
+  }
+
+  return {
+    members: (members.data ?? []).map(rowToMember),
+    accounts: (accounts.data ?? []).map(rowToAccount),
+    versions: (versions.data ?? []).map(rowToVersion),
+    projects: (projects.data ?? []).map(rowToProject),
+    opportunities: (opportunities.data ?? []).map(rowToOpportunity),
+    interactions: (interactions.data ?? []).map(rowToInteraction),
+    alerts: (alerts.data ?? []).map(rowToAlert).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+  };
+}
+
+function getStore(): Promise<Store> {
+  if (!globalThis.__brmStorePromise) {
+    globalThis.__brmStorePromise = hasSupabase()
+      ? loadFromSupabase().catch((e) => {
+          // 載入失敗時不要快取失敗結果，讓下一次請求重試
+          globalThis.__brmStorePromise = undefined;
+          throw e;
+        })
+      : Promise.resolve(buildSeedStore());
+  }
+  return globalThis.__brmStorePromise;
+}
+
+/* ═══════════ 基本查詢 ═══════════ */
+
+export async function getMembers(): Promise<Member[]> {
+  return (await getStore()).members;
+}
+
+export async function getMember(id: string): Promise<Member | undefined> {
+  return (await getStore()).members.find((m) => m.id === id);
+}
+
+export async function getInteractions(): Promise<Interaction[]> {
+  return (await getStore()).interactions;
+}
+
+export async function updateMember(member: Member): Promise<Member> {
+  const store = await getStore();
+  const idx = store.members.findIndex((m) => m.id === member.id);
+  if (idx >= 0) store.members[idx] = member;
+  await persist("members", memberToRow(member));
+  return member;
 }
 
 /** 已填卡人數：擁有至少一題答案的會員數 */
 export async function getFilledCount(): Promise<{ total: number; real: number; demo: number }> {
-  const store = demoStore();
+  const store = await getStore();
   const filledIds = new Set(
     store.versions.filter((v) => Object.keys(v.answers).length > 0).map((v) => v.memberId)
   );
@@ -204,11 +432,14 @@ export async function getFilledCount(): Promise<{ total: number; real: number; d
 
 /** 真實會員填卡超過 5 人 → 自動刪除所有範例人物與其資料 */
 async function purgeDemoIfReady(): Promise<void> {
-  const store = demoStore();
+  const store = await getStore();
   const { real } = await getFilledCount();
   if (real <= 5) return;
   const demoIds = new Set(store.members.filter((m) => m.isDemo).map((m) => m.id));
   if (demoIds.size === 0) return;
+  const removedAlertIds = store.alerts
+    .filter((a) => a.memberIds.some((id) => demoIds.has(id)))
+    .map((a) => a.id);
   store.members = store.members.filter((m) => !demoIds.has(m.id));
   store.accounts = store.accounts.filter((a) => !demoIds.has(a.memberId));
   store.versions = store.versions.filter((v) => !demoIds.has(v.memberId));
@@ -217,53 +448,18 @@ async function purgeDemoIfReady(): Promise<void> {
   store.interactions = store.interactions.filter(
     (i) => !demoIds.has(i.fromId) && !demoIds.has(i.toId)
   );
-  store.alerts = store.alerts.filter((a) => !a.memberIds.some((id) => demoIds.has(id)));
+  store.alerts = store.alerts.filter((a) => !removedAlertIds.includes(a.id));
+  // members 刪除後，帳號/交流卡/專案/商機/互動由外鍵 cascade 一併清除
+  await removeRows("members", "id", Array.from(demoIds));
+  await removeRows("biz_alerts", "id", removedAlertIds);
 }
 
-export function hasSupabase(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-  );
-}
-
-async function supabaseAdmin() {
-  const { createClient } = await import("@supabase/supabase-js");
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
-  );
-}
-
-export async function getMembers(): Promise<Member[]> {
-  if (hasSupabase()) {
-    const sb = await supabaseAdmin();
-    const { data, error } = await sb.from("members").select("*").order("name");
-    if (error) throw error;
-    return (data ?? []).map(rowToMember);
-  }
-  return demoStore().members;
-}
-
-export async function getMember(id: string): Promise<Member | undefined> {
-  const members = await getMembers();
-  return members.find((m) => m.id === id);
-}
+/* ═══════════ 交流卡 ═══════════ */
 
 export async function getCards(): Promise<ExchangeCard[]> {
-  if (hasSupabase()) {
-    const sb = await supabaseAdmin();
-    const { data, error } = await sb.from("exchange_cards").select("*");
-    if (error) throw error;
-    return (data ?? []).map((r: any) => ({
-      memberId: r.member_id,
-      answers: r.answers ?? {},
-      updatedAt: r.updated_at,
-    }));
-  }
   // AI 分析／媒合以「使用中」版本為準；若無使用中版本，退回最新修改的非封存交流卡
-  const store = demoStore();
-  const byMember = new Map<string, (typeof store.versions)[number]>();
+  const store = await getStore();
+  const byMember = new Map<string, CardVersion>();
   for (const v of store.versions) {
     if (v.status === "archived") continue;
     const cur = byMember.get(v.memberId);
@@ -291,18 +487,8 @@ export async function saveCard(
   answers: ExchangeCard["answers"],
   versionId?: string
 ): Promise<ExchangeCard> {
-  const card: ExchangeCard = { memberId, answers, updatedAt: new Date().toISOString() };
-  if (hasSupabase()) {
-    const sb = await supabaseAdmin();
-    const { error } = await sb.from("exchange_cards").upsert({
-      member_id: memberId,
-      answers,
-      updated_at: card.updatedAt,
-    });
-    if (error) throw error;
-    return card;
-  }
-  const store = demoStore();
+  const now = new Date().toISOString();
+  const store = await getStore();
   const who = nameOf(store.members, memberId);
   let target = versionId
     ? store.versions.find((v) => v.id === versionId && v.memberId === memberId)
@@ -315,16 +501,17 @@ export async function saveCard(
       title: "初版商業檔案",
       answers: {},
       status: "active",
-      createdAt: card.updatedAt,
-      updatedAt: card.updatedAt,
+      createdAt: now,
+      updatedAt: now,
       createdBy: who,
       updatedBy: who,
     };
     store.versions.push(target);
   }
   target.answers = answers;
-  target.updatedAt = card.updatedAt;
+  target.updatedAt = now;
   target.updatedBy = who;
+  await persist("card_versions", versionToRow(target));
   // 真實填卡人數超過 5 人 → 自動移除範例人物
   await purgeDemoIfReady();
   // 交流卡更新 → AI 立即重新計算媒合
@@ -340,13 +527,13 @@ function nextVersionNumber(store: Store, memberId: string): number {
 
 /** 取得會員的所有交流卡版本（新→舊） */
 export async function getCardVersions(memberId: string): Promise<CardVersion[]> {
-  return demoStore()
-    .versions.filter((v) => v.memberId === memberId)
+  return (await getStore()).versions
+    .filter((v) => v.memberId === memberId)
     .sort((a, b) => b.version - a.version);
 }
 
 export async function getCardVersion(id: string): Promise<CardVersion | undefined> {
-  return demoStore().versions.find((v) => v.id === id);
+  return (await getStore()).versions.find((v) => v.id === id);
 }
 
 /** 建立新交流卡（可從既有版本複製快速修改） */
@@ -354,7 +541,7 @@ export async function createCardVersion(
   memberId: string,
   opts: { title?: string; fromVersionId?: string } = {}
 ): Promise<CardVersion> {
-  const store = demoStore();
+  const store = await getStore();
   const who = nameOf(store.members, memberId);
   const from = opts.fromVersionId
     ? store.versions.find((v) => v.id === opts.fromVersionId)
@@ -373,6 +560,7 @@ export async function createCardVersion(
     updatedBy: who,
   };
   store.versions.push(v);
+  await persist("card_versions", versionToRow(v));
   return v;
 }
 
@@ -381,7 +569,7 @@ export async function updateCardVersion(
   id: string,
   patch: { title?: string; status?: CardStatus }
 ): Promise<CardVersion | undefined> {
-  const store = demoStore();
+  const store = await getStore();
   const v = store.versions.find((x) => x.id === id);
   if (!v) return undefined;
   const who = nameOf(store.members, v.memberId);
@@ -389,6 +577,7 @@ export async function updateCardVersion(
     for (const other of store.versions) {
       if (other.memberId === v.memberId && other.status === "active" && other.id !== id) {
         other.status = "completed";
+        await persist("card_versions", versionToRow(other));
       }
     }
   }
@@ -396,6 +585,7 @@ export async function updateCardVersion(
   if (patch.status !== undefined) v.status = patch.status;
   v.updatedAt = new Date().toISOString();
   v.updatedBy = who;
+  await persist("card_versions", versionToRow(v));
   if (patch.status === "active") {
     await recomputeAlerts(v.memberId, `${who}啟用了新的交流卡「${v.title}」`);
   }
@@ -403,17 +593,18 @@ export async function updateCardVersion(
 }
 
 export async function deleteCardVersion(id: string): Promise<boolean> {
-  const store = demoStore();
+  const store = await getStore();
   const idx = store.versions.findIndex((v) => v.id === id);
   if (idx < 0) return false;
   store.versions.splice(idx, 1);
+  await removeRows("card_versions", "id", [id]);
   return true;
 }
 
 /* ═══════════ 專案管理（Projects） ═══════════ */
 
 export async function getProjects(memberId?: string): Promise<Project[]> {
-  const all = demoStore().projects;
+  const all = (await getStore()).projects;
   const list = memberId ? all.filter((p) => p.memberId === memberId) : all;
   return [...list].sort(
     (a, b) => Number(b.isMain) - Number(a.isMain) || b.importance - a.importance
@@ -424,11 +615,14 @@ export async function getProjects(memberId?: string): Promise<Project[]> {
 export async function saveProject(
   input: Omit<Project, "id" | "createdAt" | "updatedAt"> & { id?: string }
 ): Promise<Project> {
-  const store = demoStore();
+  const store = await getStore();
   const now = new Date().toISOString();
   if (input.isMain) {
     for (const p of store.projects) {
-      if (p.memberId === input.memberId) p.isMain = false;
+      if (p.memberId === input.memberId && p.isMain) {
+        p.isMain = false;
+        await persist("projects", projectToRow(p));
+      }
     }
   }
   let project: Project;
@@ -439,6 +633,7 @@ export async function saveProject(
     project = { ...input, id: `p-${Date.now()}`, createdAt: now, updatedAt: now };
     store.projects.push(project);
   }
+  await persist("projects", projectToRow(project));
   const who = nameOf(store.members, input.memberId);
   // 新增／更新專案 → AI 立即重新計算媒合
   await recomputeAlerts(input.memberId, `${who}${existing ? "更新" : "新增"}了專案「${project.name}」`);
@@ -446,10 +641,11 @@ export async function saveProject(
 }
 
 export async function deleteProject(id: string): Promise<boolean> {
-  const store = demoStore();
+  const store = await getStore();
   const idx = store.projects.findIndex((p) => p.id === id);
   if (idx < 0) return false;
   store.projects.splice(idx, 1);
+  await removeRows("projects", "id", [id]);
   return true;
 }
 
@@ -459,7 +655,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 /** 智慧提醒：交流卡逾 90 天未更新、主推專案已逾結束日期 */
 export async function getReminders(memberId: string): Promise<Reminder[]> {
-  const store = demoStore();
+  const store = await getStore();
   const reminders: Reminder[] = [];
   const active = store.versions.find((v) => v.memberId === memberId && v.status === "active");
   if (active && Date.now() - new Date(active.updatedAt).getTime() > 90 * DAY) {
@@ -488,8 +684,8 @@ export async function getReminders(memberId: string): Promise<Reminder[]> {
 
 /** 取得與我有關的商機快訊（新→舊） */
 export async function getAlerts(memberId: string): Promise<BizAlert[]> {
-  return demoStore()
-    .alerts.filter((a) => a.memberIds.includes(memberId))
+  return (await getStore()).alerts
+    .filter((a) => a.memberIds.includes(memberId))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -498,7 +694,7 @@ export async function getAlerts(memberId: string): Promise<BizAlert[]> {
  * 成功率 ≥ 85% 即通知配對雙方（同一組合 7 天內不重複通知）。
  */
 export async function recomputeAlerts(changedMemberId: string, trigger: string): Promise<BizAlert[]> {
-  const store = demoStore();
+  const store = await getStore();
   const cards = await getCards();
   const cardMap = new Map(cards.map((c) => [c.memberId, c]));
   const bundles: MemberBundle[] = store.members.map((m) => ({
@@ -538,79 +734,10 @@ export async function recomputeAlerts(changedMemberId: string, trigger: string):
     };
     store.alerts.unshift(alert);
     created.push(alert);
+    await persist("biz_alerts", alertToRow(alert));
   }
   store.alerts.length = Math.min(store.alerts.length, 100);
   return created;
-}
-
-export async function updateMember(member: Member): Promise<Member> {
-  if (hasSupabase()) {
-    const sb = await supabaseAdmin();
-    const { error } = await sb.from("members").upsert({
-      id: member.id,
-      name: member.name,
-      company: member.company,
-      industry: member.industry,
-      chapter: member.chapter,
-      title: member.title,
-      phone: member.phone,
-      line: member.line,
-      email: member.email,
-      website: member.website ?? null,
-      facebook: member.facebook ?? null,
-      instagram: member.instagram ?? null,
-      linkedin: member.linkedin ?? null,
-      role: member.role,
-      color: member.color,
-      media: member.media,
-    });
-    if (error) throw error;
-    return member;
-  }
-  const store = demoStore();
-  const idx = store.members.findIndex((m) => m.id === member.id);
-  if (idx >= 0) store.members[idx] = member;
-  return member;
-}
-
-export async function getInteractions(): Promise<Interaction[]> {
-  if (hasSupabase()) {
-    const sb = await supabaseAdmin();
-    const { data, error } = await sb.from("interactions").select("*").order("date", { ascending: false });
-    if (error) throw error;
-    return (data ?? []).map((r: any) => ({
-      id: r.id,
-      type: r.type,
-      fromId: r.from_id,
-      toId: r.to_id,
-      date: r.date,
-      note: r.note ?? undefined,
-      amount: r.amount ?? undefined,
-      closed: r.closed ?? undefined,
-    }));
-  }
-  return demoStore().interactions;
-}
-
-function rowToMember(r: any): Member {
-  return {
-    id: r.id,
-    name: r.name,
-    company: r.company ?? "",
-    industry: r.industry ?? "",
-    chapter: r.chapter ?? "",
-    title: r.title ?? "",
-    phone: r.phone ?? "",
-    line: r.line ?? "",
-    email: r.email ?? "",
-    website: r.website ?? undefined,
-    facebook: r.facebook ?? undefined,
-    instagram: r.instagram ?? undefined,
-    linkedin: r.linkedin ?? undefined,
-    role: r.role ?? "member",
-    color: r.color ?? "#c8102e",
-    media: r.media ?? {},
-  };
 }
 
 /* ═══════════ Email 帳號登入／註冊 ═══════════ */
@@ -618,7 +745,7 @@ function rowToMember(r: any): Member {
 const PALETTE_COLORS = ["#c8102e", "#2a78d6", "#eda100", "#1baf7a", "#4a3aa7", "#eb6834", "#e87ba4", "#008300"];
 
 export async function verifyLogin(email: string, password: string): Promise<Member | null> {
-  const store = demoStore();
+  const store = await getStore();
   const acc = store.accounts.find((a) => a.email === email.trim().toLowerCase());
   if (!acc) return null;
   if (hashPassword(password, acc.salt) !== acc.passwordHash) return null;
@@ -637,7 +764,7 @@ export interface RegisterInput {
 }
 
 export async function registerMember(input: RegisterInput): Promise<{ member?: Member; error?: string }> {
-  const store = demoStore();
+  const store = await getStore();
   const email = input.email.trim().toLowerCase();
   if (store.accounts.some((a) => a.email === email)) {
     return { error: "這個 Email 已經註冊過了，請直接登入" };
@@ -659,7 +786,10 @@ export async function registerMember(input: RegisterInput): Promise<{ member?: M
   };
   store.members.push(member);
   const salt = randomBytes(8).toString("hex");
-  store.accounts.push({ email, memberId: member.id, salt, passwordHash: hashPassword(input.password, salt) });
+  const account = { email, memberId: member.id, salt, passwordHash: hashPassword(input.password, salt) };
+  store.accounts.push(account);
+  await persist("members", memberToRow(member));
+  await persist("accounts", accountToRow(account));
   return { member };
 }
 
@@ -668,12 +798,13 @@ export async function completeOnboarding(
   memberId: string,
   answers: Record<string, ExchangeCard["answers"][string]>
 ): Promise<Member | null> {
-  const store = demoStore();
+  const store = await getStore();
   const member = store.members.find((m) => m.id === memberId);
   if (!member) return null;
   const existing = await getCard(memberId);
   await saveCard(memberId, { ...(existing?.answers ?? {}), ...answers });
   member.onboarded = true;
+  await persist("members", memberToRow(member));
   return member;
 }
 
@@ -682,19 +813,23 @@ export async function deleteMember(
   id: string,
   requesterId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const store = demoStore();
+  const store = await getStore();
   const requester = store.members.find((m) => m.id === requesterId);
   if (requester?.role !== "admin") return { ok: false, error: "僅管理員可刪除會員" };
   if (id === requesterId) return { ok: false, error: "無法刪除自己的帳號" };
   const target = store.members.find((m) => m.id === id);
   if (!target) return { ok: false, error: "找不到這位會員" };
+  const removedAlertIds = store.alerts.filter((a) => a.memberIds.includes(id)).map((a) => a.id);
   store.members = store.members.filter((m) => m.id !== id);
   store.accounts = store.accounts.filter((a) => a.memberId !== id);
   store.versions = store.versions.filter((v) => v.memberId !== id);
   store.projects = store.projects.filter((p) => p.memberId !== id);
   store.opportunities = store.opportunities.filter((o) => o.memberId !== id);
   store.interactions = store.interactions.filter((i) => i.fromId !== id && i.toId !== id);
-  store.alerts = store.alerts.filter((a) => !a.memberIds.includes(id));
+  store.alerts = store.alerts.filter((a) => !removedAlertIds.includes(a.id));
+  // members 刪除後，其餘資料由外鍵 cascade 清除
+  await removeRows("members", "id", [id]);
+  await removeRows("biz_alerts", "id", removedAlertIds);
   return { ok: true };
 }
 
@@ -704,20 +839,21 @@ export async function setMemberRole(
   role: "member" | "admin",
   requesterId: string
 ): Promise<{ ok: boolean; member?: Member; error?: string }> {
-  const store = demoStore();
+  const store = await getStore();
   const requester = store.members.find((m) => m.id === requesterId);
   if (requester?.role !== "admin") return { ok: false, error: "僅管理員可調整權限" };
   if (id === requesterId) return { ok: false, error: "無法調整自己的權限" };
   const target = store.members.find((m) => m.id === id);
   if (!target) return { ok: false, error: "找不到這位會員" };
   target.role = role;
+  await persist("members", memberToRow(target));
   return { ok: true, member: target };
 }
 
 /* ═══════════ 商機廣場（Opportunity Plaza） ═══════════ */
 
 export async function getOpportunities(): Promise<(Opportunity & { member: Member })[]> {
-  const store = demoStore();
+  const store = await getStore();
   return store.opportunities
     .map((o) => ({ ...o, member: store.members.find((m) => m.id === o.memberId)! }))
     .filter((o) => o.member)
@@ -730,7 +866,7 @@ export async function saveOpportunity(
     status?: OpportunityStatus;
   }
 ): Promise<Opportunity> {
-  const store = demoStore();
+  const store = await getStore();
   const now = new Date().toISOString();
   const existing = input.id ? store.opportunities.find((o) => o.id === input.id) : undefined;
   let opp: Opportunity;
@@ -742,6 +878,7 @@ export async function saveOpportunity(
       ...(input.status ? { status: input.status } : {}),
       updatedAt: now,
     });
+    await persist("opportunities", opportunityToRow(opp));
   } else {
     opp = {
       id: `op-${Date.now()}`,
@@ -754,6 +891,7 @@ export async function saveOpportunity(
       updatedAt: now,
     };
     store.opportunities.push(opp);
+    await persist("opportunities", opportunityToRow(opp));
     const who = nameOf(store.members, input.memberId);
     // 新增商機 → AI 立即重新計算媒合
     await recomputeAlerts(input.memberId, `${who}在商機廣場發布了「${opp.title}」`);
@@ -762,11 +900,12 @@ export async function saveOpportunity(
 }
 
 export async function setOpportunityStatus(id: string, status: OpportunityStatus): Promise<Opportunity | undefined> {
-  const store = demoStore();
+  const store = await getStore();
   const o = store.opportunities.find((x) => x.id === id);
   if (!o) return undefined;
   o.status = status;
   o.updatedAt = new Date().toISOString();
+  await persist("opportunities", opportunityToRow(o));
   return o;
 }
 
@@ -775,7 +914,7 @@ export async function deleteOpportunity(
   id: string,
   requesterId: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const store = demoStore();
+  const store = await getStore();
   const idx = store.opportunities.findIndex((o) => o.id === id);
   if (idx < 0) return { ok: false, error: "找不到這筆合作" };
   const requester = store.members.find((m) => m.id === requesterId);
@@ -785,17 +924,18 @@ export async function deleteOpportunity(
     return { ok: false, error: "只有發布者本人或管理員可以刪除" };
   }
   store.opportunities.splice(idx, 1);
+  await removeRows("opportunities", "id", [id]);
   return { ok: true };
 }
 
 /** 我要合作：通知商機發布者 */
 export async function expressInterest(oppId: string, fromMemberId: string): Promise<boolean> {
-  const store = demoStore();
+  const store = await getStore();
   const opp = store.opportunities.find((o) => o.id === oppId);
   const from = store.members.find((m) => m.id === fromMemberId);
   const owner = opp && store.members.find((m) => m.id === opp.memberId);
   if (!opp || !from || !owner || from.id === owner.id) return false;
-  store.alerts.unshift({
+  const alert: BizAlert = {
     id: `al-${Date.now()}-${fromMemberId}`,
     memberIds: [owner.id, from.id],
     pair: {
@@ -810,6 +950,8 @@ export async function expressInterest(oppId: string, fromMemberId: string): Prom
     reasons: [`${from.name}對你的合作「${opp.title}」表達了合作意願`, `聯絡方式：${from.phone}${from.line ? `｜LINE：${from.line}` : ""}`],
     trigger: `商機廣場：${from.name}點擊了「我要合作」`,
     createdAt: new Date().toISOString(),
-  });
+  };
+  store.alerts.unshift(alert);
+  await persist("biz_alerts", alertToRow(alert));
   return true;
 }
