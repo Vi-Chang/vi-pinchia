@@ -59,7 +59,13 @@ async function supabaseAdmin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } }
+    {
+      auth: { persistSession: false },
+      global: {
+        // 繞過 Next.js 的 fetch 資料快取，確保每次都讀到資料庫即時狀態
+        fetch: (url, opts) => fetch(url, { ...opts, cache: "no-store" }),
+      },
+    }
   );
 }
 
