@@ -7,7 +7,7 @@ import { SiteFooter } from "@/components/ui/SiteFooter";
 import type { Answer } from "@/lib/types";
 
 export default function OnboardingPage() {
-  const { member, loading, update } = useAuth();
+  const { member, loading, update, logout } = useAuth();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [a, setA] = useState<Record<string, Answer>>({
@@ -31,11 +31,24 @@ export default function OnboardingPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ memberId: member.id, answers: skip ? {} : a }),
       });
-      const d = await res.json();
-      if (res.ok && d.member) update(d.member);
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.member) {
+        update(d.member);
+        router.push("/dashboard");
+        return;
+      }
+      if (res.status === 404) {
+        // 帳號已不存在（示範資料重置）→ 清除本機登入狀態，避免卡在引導頁
+        alert("登入狀態已過期（示範資料已重置），請重新登入或註冊。");
+        logout();
+        router.replace("/");
+        return;
+      }
+      alert(d.error || "儲存失敗，請再試一次。");
+    } catch {
+      alert("連線失敗，請再試一次。");
     } finally {
       setBusy(false);
-      router.push("/dashboard");
     }
   };
 
@@ -88,6 +101,17 @@ export default function OnboardingPage() {
             {busy ? "儲存中…" : "完成，進入首頁 →"}
           </button>
         </div>
+        <p className="mt-4 text-center">
+          <button
+            onClick={() => {
+              logout();
+              router.replace("/");
+            }}
+            className="text-xs text-ink-muted underline-offset-2 hover:text-bni-red hover:underline"
+          >
+            登出，改用其他帳號
+          </button>
+        </p>
         <SiteFooter />
       </div>
     </div>
