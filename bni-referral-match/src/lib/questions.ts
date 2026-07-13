@@ -16,6 +16,8 @@ export interface Question {
   helper?: string;
   /** 勾選「其他」時顯示自由填寫欄（存於 `${id}_other`） */
   allowOther?: boolean;
+  /** 分組核取（checkbox）：依類別顯示，選項為 { value, label }，存值為 value */
+  groups?: { title: string; options: { value: string; label: string }[] }[];
 }
 
 export interface Section {
@@ -176,14 +178,96 @@ export const SECTIONS: Section[] = [
       {
         id: "s4_deep_talk",
         label: "深度交流的長城夥伴（可勾選）",
+        helper: "依產業鏈分類，方便你找到上下游與互補夥伴。",
         type: "checkbox",
-        options: [
-          "張婕", "張煥晨", "石沛晴", "張力文", "江品萱", "王定廣", "朱苡菱", "羅舒妍",
-          "劉宜賢", "謝雯筑", "許淑媛", "李鴻毅", "周珈汶", "李翠松", "王文正", "翁啟信",
-          "王彥萍", "吳俊霖", "趙祥吉", "鄭淑宜", "曾智源", "林宗儒", "鄭御里", "黃致榮",
-          "張維麟", "郭亭君", "蔡佩玲", "闕崇益", "趙一蒨", "蔡瑋竑", "陳佩妏", "曹珩堉",
-          "玲唯齊", "鍾宇傑", "于美云", "張立予", "陳師平", "鄧力瑋", "鄭建通", "陳麗惠",
-          "鄭志榮", "邱彥傑", "呂秉軒", "胡芸榛", "謝宗杰", "陳秋榮", "魏軒壽",
+        groups: [
+          {
+            title: "🏗️ 空間工程 · 建築裝修",
+            options: [
+              { value: "張煥晨", label: "張煥晨｜不動產買賣" },
+              { value: "王定廣", label: "王定廣｜鋁門窗" },
+              { value: "鄭建通", label: "鄭建通｜拆除工程" },
+              { value: "江品萱", label: "江品萱｜商空設計" },
+              { value: "魏軒壽", label: "魏軒壽｜大型商業空間設計" },
+              { value: "玲唯齊", label: "玲唯齊｜軟裝安裝" },
+              { value: "謝雯筑", label: "謝雯筑｜LED照明工程" },
+              { value: "林宗儒", label: "林宗儒｜冷氣空調" },
+              { value: "闕崇益", label: "闕崇益｜不銹鋼訂製" },
+            ],
+          },
+          {
+            title: "❤️ 大健康 · 醫美生命",
+            options: [
+              { value: "張婕", label: "張婕｜齒模假牙美學" },
+              { value: "石沛晴", label: "石沛晴｜醫美微整" },
+              { value: "周珈汶", label: "周珈汶｜醫美手術" },
+              { value: "王彥萍", label: "王彥萍｜保健食品" },
+              { value: "鄭御里", label: "鄭御里｜健康教練" },
+              { value: "陳麗惠", label: "陳麗惠｜龍巖生命產業" },
+            ],
+          },
+          {
+            title: "💰 金融保險 · 財務",
+            options: [
+              { value: "鍾宇傑", label: "鍾宇傑｜海外理財" },
+              { value: "朱苡菱", label: "朱苡菱｜國內投資型保單" },
+              { value: "鄭志榮", label: "鄭志榮｜醫療與長照保險" },
+              { value: "陳秋榮", label: "陳秋榮｜產業保險" },
+            ],
+          },
+          {
+            title: "📣 行銷數位 · 科技",
+            options: [
+              { value: "曹珩堉", label: "曹珩堉｜電商營運" },
+              { value: "黃致榮", label: "黃致榮｜關鍵字行銷" },
+              { value: "郭亭君", label: "郭亭君｜社群行銷" },
+              { value: "呂秉軒", label: "呂秉軒｜部落客行銷" },
+              { value: "吳俊霖", label: "吳俊霖｜網頁設計" },
+              { value: "陳師平", label: "陳師平｜AI導入應用" },
+              { value: "張立予", label: "張立予｜動態攝影" },
+            ],
+          },
+          {
+            title: "🍽️ 餐飲食品",
+            options: [
+              { value: "胡芸榛", label: "胡芸榛｜新日韓餐飲" },
+              { value: "羅舒妍", label: "羅舒妍｜台式熱炒" },
+              { value: "趙祥吉", label: "趙祥吉｜甜點蛋糕" },
+              { value: "趙一蒨", label: "趙一蒨｜素食加工" },
+              { value: "陳佩妏", label: "陳佩妏｜醬料業代表" },
+              { value: "蔡瑋竑", label: "蔡瑋竑｜酒品顧問" },
+            ],
+          },
+          {
+            title: "🧑‍⚖️ 專業顧問 · 教育服務",
+            options: [
+              { value: "邱彥傑", label: "邱彥傑｜律師" },
+              { value: "鄧力瑋", label: "鄧力瑋｜勞資顧問" },
+              { value: "翁啟信", label: "翁啟信｜政府補助" },
+              { value: "謝宗杰", label: "謝宗杰｜日文即時口譯" },
+              { value: "張力文", label: "張力文｜活動培訓" },
+              { value: "張維麟", label: "張維麟｜聲音教學" },
+            ],
+          },
+          {
+            title: "🛍️ 生活消費 · 零售",
+            options: [
+              { value: "蔡佩玲", label: "蔡佩玲｜眼鏡業" },
+              { value: "鄭淑宜", label: "鄭淑宜｜客製化珠寶設計" },
+              { value: "李鴻毅", label: "李鴻毅｜開運商品" },
+              { value: "李翠松", label: "李翠松｜旅行社" },
+              { value: "王文正", label: "王文正｜祈福祭祀顧問" },
+              { value: "許淑媛", label: "許淑媛｜寵物溝通" },
+              { value: "曾智源", label: "曾智源｜居家清潔" },
+            ],
+          },
+          {
+            title: "📦 商務製造 · 其他",
+            options: [
+              { value: "于美云", label: "于美云｜特殊印刷" },
+              { value: "劉宜賢", label: "劉宜賢｜木質包材" },
+            ],
+          },
         ],
       },
       {

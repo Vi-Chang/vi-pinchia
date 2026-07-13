@@ -13,6 +13,7 @@ import {
   answerAsString,
   CheckboxGroup,
   CheckboxPercent,
+  GroupedCheckbox,
   Dropdown,
   RadioGroup,
   Scale,
@@ -315,7 +316,10 @@ function QuestionField({
       {q.type === "radio" && (
         <RadioGroup value={answerAsString(value)} options={q.options ?? []} onChange={onChange} />
       )}
-      {q.type === "checkbox" && (
+      {q.type === "checkbox" && q.groups && (
+        <GroupedCheckbox value={answerAsArray(value)} groups={q.groups} onChange={onChange} />
+      )}
+      {q.type === "checkbox" && !q.groups && (
         <>
           <CheckboxGroup value={answerAsArray(value)} options={q.options ?? []} onChange={onChange} />
           {otherChecked && onOtherChange && (

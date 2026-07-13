@@ -104,6 +104,56 @@ export function CheckboxGroup({
   );
 }
 
+/* ---------- 分組 Checkbox（依產業鏈分類，顯示「姓名｜行業」，存值為姓名） ---------- */
+export interface CheckboxOption {
+  value: string;
+  label: string;
+}
+export interface CheckboxGroupSection {
+  title: string;
+  options: CheckboxOption[];
+}
+export function GroupedCheckbox({
+  value,
+  groups,
+  onChange,
+}: {
+  value: string[];
+  groups: CheckboxGroupSection[];
+  onChange: (v: string[]) => void;
+}) {
+  const toggle = (v: string) => {
+    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  };
+  return (
+    <div className="space-y-5">
+      {groups.map((g) => (
+        <div key={g.title}>
+          <div className="mb-2 text-sm font-bold text-ink-soft">{g.title}</div>
+          <div className="flex flex-wrap gap-2">
+            {g.options.map((o) => {
+              const on = value.includes(o.value);
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  role="checkbox"
+                  aria-checked={on}
+                  onClick={() => toggle(o.value)}
+                  className={`chip ${on ? "chip-on" : ""}`}
+                >
+                  {on && <span aria-hidden>✓</span>}
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- Checkbox + 自動比例 % ---------- */
 export function CheckboxPercent({
   value,
