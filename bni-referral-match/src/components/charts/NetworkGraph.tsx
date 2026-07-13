@@ -192,6 +192,11 @@ export function NetworkGraph({
               <text textAnchor="middle" y={32} className="fill-[#52514e] text-[11px] font-medium">
                 {n.member.name}
               </text>
+              {n.member.isDemo && (
+                <text textAnchor="middle" y={45} className="fill-[#b45309] text-[9px] font-medium">
+                  （範例）
+                </text>
+              )}
             </g>
           );
         })}
