@@ -100,13 +100,6 @@ function CardEditor() {
       .catch(() => setRecs([]));
   }, [member, section.id, recs]);
 
-  /** 一鍵把推薦夥伴加進 121 名單（s5_121_list） */
-  const addToList = (r: MatchRec) => {
-    const entry = `${r.target.name}（${r.target.industry}）`;
-    const cur = typeof answers.s5_121_list === "string" ? answers.s5_121_list.trim() : "";
-    if (cur.includes(r.target.name)) return;
-    set("s5_121_list", cur ? `${cur}、${entry}` : entry);
-  };
 
   const sectionDone = useMemo(
     () =>
@@ -218,9 +211,6 @@ function CardEditor() {
             )}
             <div className="mt-4 space-y-3">
               {recs?.map((r) => {
-                const added =
-                  typeof answers.s5_121_list === "string" &&
-                  answers.s5_121_list.includes(r.target.name);
                 return (
                   <div key={r.targetId} className="rounded-2xl bg-white/50 p-4">
                     <div className="flex flex-wrap items-center gap-3">
@@ -234,13 +224,9 @@ function CardEditor() {
                         </span>
                       </div>
                       <span className="text-lg font-bold text-bni-red">{r.probability}%</span>
-                      <button
-                        onClick={() => addToList(r)}
-                        disabled={added}
-                        className="chip !text-xs disabled:opacity-50"
-                      >
-                        {added ? "✓ 已在名單" : "＋ 加入 121 名單"}
-                      </button>
+                      <Link href={`/partner/${r.targetId}`} className="chip !text-xs">
+                        🪪 看商機卡
+                      </Link>
                     </div>
                     {r.reasons[0] && (
                       <p className="mt-2 text-[13px] text-ink-soft">◆ {r.reasons[0]}</p>

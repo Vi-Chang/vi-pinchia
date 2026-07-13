@@ -117,6 +117,7 @@ export default function MembersPage() {
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2 text-xs">
+                  <a href={`/partner/${m.id}`} className="chip !border-bni-red/30 font-semibold !text-bni-red">🪪 商機卡</a>
                   <a href={`tel:${m.phone}`} className="chip">📞 電話</a>
                   <a href={`mailto:${m.email}`} className="chip">✉️ Email</a>
                   {isAdmin && m.id !== member.id && (

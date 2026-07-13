@@ -129,8 +129,12 @@ export default function PlazaPage() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ oppId: o.id, memberId: member.id }),
     });
-    if (res.ok) flash(`已通知 ${o.member.name}，對方會在商機快訊看到你的合作意願！`);
-    else flash((await res.json()).error || "送出失敗");
+    if (res.ok) {
+      // 通知對方後，帶使用者去看夥伴的商機卡與合作建議
+      window.location.href = `/partner/${o.memberId}?from=interest`;
+    } else {
+      flash((await res.json()).error || "送出失敗");
+    }
   };
 
   return (
@@ -269,16 +273,18 @@ export default function PlazaPage() {
             return (
               <div key={o.id} className={`glass glass-hover flex flex-col p-6 ${!open ? "opacity-70" : ""}`}>
                 <div className="flex items-center gap-3">
-                  <Avatar name={o.member.name} color={o.member.color} size={44} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold text-ink">
-                      {o.member.name}
-                      {o.member.isDemo && <span className="ml-1 text-xs font-normal text-amber-600">（範例）</span>}
+                  <a href={`/partner/${o.memberId}`} className="flex min-w-0 flex-1 items-center gap-3 transition hover:opacity-80" title="看夥伴商機卡">
+                    <Avatar name={o.member.name} color={o.member.color} size={44} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-ink">
+                        {o.member.name}
+                        {o.member.isDemo && <span className="ml-1 text-xs font-normal text-amber-600">（範例）</span>}
+                      </div>
+                      <div className="truncate text-xs text-ink-muted">
+                        {o.member.chapter} · {o.member.industry}
+                      </div>
                     </div>
-                    <div className="truncate text-xs text-ink-muted">
-                      {o.member.chapter} · {o.member.industry}
-                    </div>
-                  </div>
+                  </a>
                   {o.isTemplate && (
                     <span className="shrink-0 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                       範本
