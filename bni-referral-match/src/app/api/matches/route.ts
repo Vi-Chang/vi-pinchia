@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCards, getInteractions, getMembers, getProjects } from "@/lib/db";
 import { matchesFor, MemberBundle } from "@/lib/match-engine";
 import { buildSuggestion } from "@/lib/suggestions";
+import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  if (!getSessionMemberId(req)) return NextResponse.json({ error: "未登入" }, { status: 401 });
   const memberId = req.nextUrl.searchParams.get("memberId");
   const scope = req.nextUrl.searchParams.get("scope"); // "chapter" = 僅同分會
   const [members, cards, projects, interactions] = await Promise.all([

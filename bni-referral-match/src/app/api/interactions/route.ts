@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createInteraction, deleteInteraction, getInteractions, recomputeAlerts } from "@/lib/db";
+import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+const noAuth = () => NextResponse.json({ error: "未登入" }, { status: 401 });
+
+export async function GET(req: NextRequest) {
+  if (!getSessionMemberId(req)) return noAuth();
   const interactions = await getInteractions();
   return NextResponse.json({ interactions });
 }
@@ -19,6 +23,8 @@ export async function GET() {
  *   potential      可能產生合作
  */
 export async function POST(req: NextRequest) {
+  const uid = getSessionMemberId(req);
+  if (!uid) return noAuth();
   const { memberId, targetId, kind, note } = (await req.json()) ?? {};
   if (!memberId || !targetId || memberId === targetId) {
     return NextResponse.json({ error: "參數不正確" }, { status: 400 });
@@ -57,12 +63,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const uid = getSessionMemberId(req);
+  if (!uid) return noAuth();
   const id = req.nextUrl.searchParams.get("id");
-  const requesterId = req.nextUrl.searchParams.get("requesterId");
-  if (!id || !requesterId) {
-    return NextResponse.json({ error: "id 與 requesterId 必填" }, { status: 400 });
-  }
-  const result = await deleteInteraction(id, requesterId);
+  if (!id) return NextResponse.json({ error: "id 必填" }, { status: 400 });
+  const result = await deleteInteraction(id, uid);
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 403 });
   const interactions = await getInteractions();
   return NextResponse.json({ ok: true, interactions });

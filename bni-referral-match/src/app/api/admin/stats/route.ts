@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
-import { getCards, getInteractions, getMembers } from "@/lib/db";
+import { NextRequest, NextResponse } from "next/server";
+import { getCards, getInteractions, getMember, getMembers } from "@/lib/db";
+import { getSessionMemberId } from "@/lib/auth";
 import {
   activityHeatmap,
   cardProgress,
@@ -13,7 +14,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const uid = getSessionMemberId(req);
+  if (!uid) return NextResponse.json({ error: "未登入" }, { status: 401 });
+  const requester = await getMember(uid);
+  if (requester?.role !== "admin") return NextResponse.json({ error: "僅管理員可存取" }, { status: 403 });
   const [members, cards, interactions] = await Promise.all([
     getMembers(),
     getCards(),

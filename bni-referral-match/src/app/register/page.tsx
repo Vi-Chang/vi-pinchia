@@ -15,6 +15,7 @@ export default function RegisterPage() {
   const { login } = useAuth();
   const router = useRouter();
   const [f, setF] = useState({
+    accessCode: "",
     name: "",
     chapter: "",
     email: "",
@@ -64,6 +65,16 @@ export default function RegisterPage() {
         </p>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="label">分會通行密碼 *</label>
+            <input
+              type="password"
+              className="field"
+              value={f.accessCode}
+              onChange={(e) => set("accessCode", e.target.value)}
+              placeholder="洽分會管理員索取"
+            />
+          </div>
           <div>
             <label className="label">姓名 *</label>
             <input className="field" value={f.name} onChange={(e) => set("name", e.target.value)} autoComplete="name" />

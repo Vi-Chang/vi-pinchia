@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCards, getMembers, getProjects } from "@/lib/db";
 import { getPairInsight, hasAiKey } from "@/lib/ai-insight";
 import type { MemberBundle } from "@/lib/match-engine";
+import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
  * 只有使用者主動點擊時才進到這裡；其餘功能一律走本地規則引擎。
  */
 export async function POST(req: NextRequest) {
+  if (!getSessionMemberId(req)) return NextResponse.json({ error: "未登入" }, { status: 401 });
   if (!hasAiKey()) {
     return NextResponse.json(
       { error: "尚未設定 ANTHROPIC_API_KEY，AI 深度分析未啟用（其他功能不受影響）。" },

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { completeOnboarding } from "@/lib/db";
+import { getMember } from "@/lib/db";
 import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: NextRequest) {
+/** 驗證目前 session 是否有效，回傳最新會員資料 */
+export async function GET(req: NextRequest) {
   const uid = getSessionMemberId(req);
   if (!uid) return NextResponse.json({ error: "未登入" }, { status: 401 });
-  const { answers } = (await req.json()) ?? {};
-  const member = await completeOnboarding(uid, answers ?? {});
-  if (!member) return NextResponse.json({ error: "member not found" }, { status: 404 });
+  const member = await getMember(uid);
+  if (!member) return NextResponse.json({ error: "帳號不存在" }, { status: 401 });
   return NextResponse.json({ member });
 }

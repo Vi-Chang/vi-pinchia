@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCard, getCardVersion, saveCard } from "@/lib/db";
 import { cardProgress } from "@/lib/stats";
+import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  if (!getSessionMemberId(req)) return NextResponse.json({ error: "未登入" }, { status: 401 });
   const memberId = req.nextUrl.searchParams.get("memberId");
   const versionId = req.nextUrl.searchParams.get("versionId");
   if (!memberId) return NextResponse.json({ error: "memberId required" }, { status: 400 });
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  if (!getSessionMemberId(req)) return NextResponse.json({ error: "未登入" }, { status: 401 });
   const body = await req.json();
   const { memberId, answers, versionId } = body ?? {};
   if (!memberId || typeof answers !== "object") {

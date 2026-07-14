@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyLogin } from "@/lib/db";
+import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +13,7 @@ export async function POST(req: NextRequest) {
   if (!member) {
     return NextResponse.json({ error: "Email 或密碼不正確" }, { status: 401 });
   }
-  return NextResponse.json({ member });
+  const res = NextResponse.json({ member });
+  res.cookies.set(SESSION_COOKIE, signSession(member.id), sessionCookieOptions());
+  return res;
 }

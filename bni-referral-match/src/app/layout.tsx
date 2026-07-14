@@ -4,7 +4,9 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
   title: "商務夥伴商機交流平台 · Business Referral Match",
-  description: "高質感的商務夥伴商機引薦交流系統－交流卡、AI 商機分析、配對引擎與會員關係圖。",
+  description: "會員專屬平台，需登入使用。",
+  // 不被搜尋引擎／AI 爬蟲索引
+  robots: { index: false, follow: false, nocache: true },
 };
 
 export const viewport: Viewport = {

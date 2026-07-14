@@ -5,16 +5,21 @@ import {
   getCardVersions,
   updateCardVersion,
 } from "@/lib/db";
+import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
+const noAuth = () => NextResponse.json({ error: "未登入" }, { status: 401 });
+
 export async function GET(req: NextRequest) {
+  if (!getSessionMemberId(req)) return noAuth();
   const memberId = req.nextUrl.searchParams.get("memberId");
   if (!memberId) return NextResponse.json({ error: "memberId required" }, { status: 400 });
   return NextResponse.json({ versions: await getCardVersions(memberId) });
 }
 
 export async function POST(req: NextRequest) {
+  if (!getSessionMemberId(req)) return noAuth();
   const body = await req.json();
   const { memberId, title, fromVersionId } = body ?? {};
   if (!memberId) return NextResponse.json({ error: "memberId required" }, { status: 400 });
@@ -23,6 +28,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  if (!getSessionMemberId(req)) return noAuth();
   const body = await req.json();
   const { id, title, status } = body ?? {};
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
@@ -32,6 +38,7 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  if (!getSessionMemberId(req)) return noAuth();
   const id = req.nextUrl.searchParams.get("id");
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
   const ok = await deleteCardVersion(id);

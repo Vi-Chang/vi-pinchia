@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildAnalysis } from "@/lib/ai-analysis";
 import { getCards, getMembers } from "@/lib/db";
 import type { MemberBundle } from "@/lib/match-engine";
+import { getSessionMemberId } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  if (!getSessionMemberId(req)) return NextResponse.json({ error: "未登入" }, { status: 401 });
   const memberId = req.nextUrl.searchParams.get("memberId");
   if (!memberId) return NextResponse.json({ error: "memberId required" }, { status: 400 });
 

@@ -28,11 +28,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 以伺服器 session 為準：驗證 cookie 是否有效
+    let stored: Member | null = null;
     try {
       const raw = localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
-      if (raw) setMember(JSON.parse(raw));
+      if (raw) stored = JSON.parse(raw);
     } catch {}
-    setLoading(false);
+    if (stored) setMember(stored); // 先用本機資料避免閃爍
+
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.member) {
+          setMember(d.member);
+          const store = sessionStorage.getItem(KEY) ? sessionStorage : localStorage;
+          store.setItem(KEY, JSON.stringify(d.member));
+        } else {
+          // session 失效 → 清除本機登入狀態
+          localStorage.removeItem(KEY);
+          sessionStorage.removeItem(KEY);
+          setMember(null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const login = (m: Member, remember = true) => {
@@ -49,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     localStorage.removeItem(KEY);
     sessionStorage.removeItem(KEY);
     setMember(null);

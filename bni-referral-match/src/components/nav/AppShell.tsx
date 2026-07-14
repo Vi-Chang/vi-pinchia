@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Avatar } from "@/components/ui/Avatar";
+import { CopyGuard } from "@/components/ui/CopyGuard";
 import { SiteFooter } from "@/components/ui/SiteFooter";
 
 const NAV = [
@@ -46,6 +47,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-[1440px]">
+      <CopyGuard />
       {/* 桌機側欄 */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-4 p-5 lg:flex">
         <Link href="/dashboard" className="glass-strong glass-hover flex items-center gap-3 px-5 py-4">
