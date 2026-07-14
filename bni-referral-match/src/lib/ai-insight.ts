@@ -2,6 +2,16 @@ import type { Answer } from "./types";
 import type { MemberBundle } from "./match-engine";
 import { computeMatch } from "./match-engine";
 import { buildSuggestion } from "./suggestions";
+import { buildAnalysis } from "./ai-analysis";
+
+/**
+ * 全站唯一的 Anthropic 模型設定：
+ * 深度合作分析（夥伴商機卡／配對頁）與 AI 深度總結（分析頁）共用同一個模型與呼叫路徑，
+ * 不再各自寫死不同模型。可用環境變數 ANTHROPIC_MODEL 覆寫。
+ */
+export function anthropicModel(): string {
+  return process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+}
 
 /**
  * AI 按需深度分析（成本控管設計）：
@@ -64,7 +74,8 @@ function memberBrief(b: MemberBundle): string {
   ].join("\n");
 }
 
-async function callClaude(prompt: string): Promise<string> {
+/** 呼叫 Anthropic Messages API（全站唯一入口，統一模型與標頭）；失敗會 throw。 */
+export async function callClaude(prompt: string, maxTokens = 1200): Promise<string> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -73,8 +84,8 @@ async function callClaude(prompt: string): Promise<string> {
       "content-type": "application/json",
     },
     body: JSON.stringify({
-      model: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
-      max_tokens: 1200,
+      model: anthropicModel(),
+      max_tokens: maxTokens,
       messages: [{ role: "user", content: prompt }],
     }),
   });
@@ -162,4 +173,67 @@ ${memberBrief(b)}
   const cachedAt = new Date().toISOString();
   cache().set(key, { insight, cachedAt });
   return { insight, cached: false, cachedAt };
+}
+
+/* ------------------------------------------------------------------ *
+ * AI 深度總結（分析頁）：整併自舊 /api/analysis 的那段內嵌 prompt。
+ * 現在改為「按需呼叫 + 快取」，與全站 AI 成本控管一致，
+ * 不再每次開分析頁就扣費。走上面同一條 callClaude 路徑與同一個模型。
+ * ------------------------------------------------------------------ */
+
+interface NarrativeCacheEntry {
+  narrative: string;
+  cachedAt: string;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __brmNarrativeCache: Map<string, NarrativeCacheEntry> | undefined;
+}
+
+function narrativeCache(): Map<string, NarrativeCacheEntry> {
+  if (!globalThis.__brmNarrativeCache) globalThis.__brmNarrativeCache = new Map();
+  return globalThis.__brmNarrativeCache;
+}
+
+/**
+ * 針對某位會員，產生「本月最應優先推進的一個合作機會與具體第一步」的深度總結。
+ * 以本地規則引擎的最佳配對為基礎，交由 Claude 產生 150 字內敘事；含快取。
+ * 快取鍵包含目標與全體會員的更新時間，任一方更新即失效。
+ */
+export async function getMemberNarrative(
+  target: MemberBundle,
+  all: MemberBundle[]
+): Promise<{ narrative: string; cached: boolean; cachedAt: string }> {
+  // 快取鍵：目標卡＋專案＋全體會員內容更新時間（有人更新即重算）
+  const signature = all
+    .map((b) => `${b.member.id}:${b.card?.updatedAt ?? ""}`)
+    .sort()
+    .join(",");
+  const key = ["narrative", target.member.id, signature].join("::");
+  const hit = narrativeCache().get(key);
+  if (hit) return { narrative: hit.narrative, cached: true, cachedAt: hit.cachedAt };
+
+  // 先用本地規則引擎算出七大面向，取最佳合作對象作為 prompt 的立足點
+  const analysis = buildAnalysis(target, all);
+  const summary = all
+    .map((b) => {
+      const a = b.card?.answers ?? {};
+      return `${b.member.name}（${b.member.company}／${b.member.industry}）：${asText(a.s6_intro_60)} 理想客戶：${asText(a.s6_ideal_customer)} 可提供：${asList(a.s6_resources_give)} 需要：${asList(a.s6_resources_need)}`;
+    })
+    .join("\n");
+
+  const prompt = `你是商務引薦商機分析顧問。以下是分會成員的交流卡摘要：
+${summary}
+
+本地規則引擎判斷「${target.member.name}」目前最具潛力的合作對象與理由：${analysis.narrative}
+
+請針對「${target.member.name}」，用 150 字以內的繁體中文，說明他本月最應該優先推進的一個合作機會與具體第一步。只回純文字，不要 markdown。`;
+
+  const text = (await callClaude(prompt, 600)).trim();
+  // 呼叫成功但內容為空時，退回規則引擎敘事，避免顯示空白
+  const narrative = text || analysis.narrative;
+  const cachedAt = new Date().toISOString();
+  narrativeCache().set(key, { narrative, cachedAt });
+  return { narrative, cached: false, cachedAt };
 }

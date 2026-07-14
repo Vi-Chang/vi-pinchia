@@ -16,16 +16,42 @@ const BLOCKS: { key: keyof Omit<AiAnalysis, "narrative">; title: string; icon: s
   { key: "crossSell", title: "可交叉銷售", icon: "🔁", desc: "可互相打包彼此服務" },
 ];
 
+type AiState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "done"; narrative: string; cached: boolean };
+
 export default function AnalysisPage() {
   const { member } = useAuth();
   const [analysis, setAnalysis] = useState<AiAnalysis | null>(null);
+  const [ai, setAi] = useState<AiState>({ status: "idle" });
 
   useEffect(() => {
     if (!member) return;
+    setAi({ status: "idle" });
     fetch(`/api/analysis?memberId=${member.id}`)
       .then((r) => r.json())
       .then((d) => setAnalysis(d.analysis ?? null));
   }, [member]);
+
+  // AI 深度總結：按需呼叫 Claude（含快取），與全站 AI 成本控管一致
+  const runAiSummary = async () => {
+    if (!member || ai.status === "loading") return;
+    setAi({ status: "loading" });
+    try {
+      const res = await fetch("/api/analysis", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ memberId: member.id }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "AI 總結失敗");
+      setAi({ status: "done", narrative: d.narrative, cached: d.cached });
+    } catch (e) {
+      setAi({ status: "error", message: e instanceof Error ? e.message : "AI 總結失敗" });
+    }
+  };
 
   return (
     <AppShell>
@@ -38,8 +64,32 @@ export default function AnalysisPage() {
           </p>
           {analysis && (
             <div className="mt-5 rounded-2xl border border-gold-300/50 bg-white/60 p-5">
-              <div className="text-xs font-semibold tracking-wide text-gold-600">本月行動建議</div>
-              <p className="mt-1.5 leading-7 text-ink">{analysis.narrative}</p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs font-semibold tracking-wide text-gold-600">
+                  {ai.status === "done" ? "✨ AI 深度總結" : "本月行動建議"}
+                </div>
+                {ai.status === "done" && ai.cached && (
+                  <span className="text-[10px] text-ink-muted">已快取（不重複計費）</span>
+                )}
+              </div>
+              <p className="mt-1.5 leading-7 text-ink">
+                {ai.status === "done" ? ai.narrative : analysis.narrative}
+              </p>
+
+              {/* AI 深度總結：點擊才呼叫 Claude */}
+              <div className="mt-3 border-t border-ink/5 pt-3">
+                {(ai.status === "idle" || ai.status === "error") && (
+                  <button onClick={runAiSummary} className="btn-gold !px-4 !py-2 !text-xs">
+                    ✨ AI 深度總結（呼叫 Claude 產生專屬建議）
+                  </button>
+                )}
+                {ai.status === "loading" && (
+                  <p className="animate-pulse text-xs text-ink-muted">🤖 Claude 正在深度分析…</p>
+                )}
+                {ai.status === "error" && (
+                  <p className="mt-2 text-xs text-bni-red">{ai.message}</p>
+                )}
+              </div>
             </div>
           )}
         </div>
