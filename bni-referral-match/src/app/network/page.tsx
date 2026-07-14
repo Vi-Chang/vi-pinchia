@@ -167,7 +167,7 @@ export default function NetworkPage() {
                                 <span className="text-ink-soft">
                                   {i.fromId === member.id ? `我 → ${selected.name}` : `${selected.name} → 我`}
                                 </span>
-                                <span className="text-[11px] text-ink-muted">{i.date}</span>
+                                <span className="text-[11px] text-ink-muted">{i.date.slice(0, 10)}</span>
                               </span>
                               <button
                                 onClick={() => removeInteraction(i.id)}
@@ -209,7 +209,7 @@ export default function NetworkPage() {
                         >
                           {edgeStyle(i.type).label}
                         </span>
-                        <span className="text-[11px] text-ink-muted">{i.date}</span>
+                        <span className="text-[11px] text-ink-muted">{i.date.slice(0, 10)}</span>
                       </div>
                       <div className="mt-1.5 text-[13px] text-ink">
                         {nameOf(i.fromId)} → {nameOf(i.toId)}

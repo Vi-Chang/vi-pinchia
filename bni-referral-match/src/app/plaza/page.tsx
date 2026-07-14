@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import type { Member, MatchResult, Opportunity } from "@/lib/types";
 
 type Opp = Opportunity & { member: Member };
-type Rec = MatchResult & { target: Member };
+type Rec = MatchResult & { target: Member; dismissed121?: boolean };
 
 const TYPES = ["轉介客戶", "資源共享", "異業活動", "專業諮詢", "優惠方案", "其他"];
 const FAV_KEY = "brm-plaza-favs";
@@ -43,13 +43,27 @@ export default function PlazaPage() {
     } catch {}
   }, [load]);
 
-  useEffect(() => {
+  const loadRecs = useCallback(() => {
     if (!member) return;
-    // AI 推薦（本地規則引擎，零 API 成本）
+    // AI 推薦（本地規則引擎，零 API 成本）；已完成 121 者不再推薦
     fetch(`/api/matches?memberId=${member.id}`)
       .then((r) => r.json())
-      .then((d) => setRecs((d.matches ?? []).slice(0, 3)));
+      .then((d) => setRecs((d.matches ?? []).filter((m: Rec) => !m.dismissed121).slice(0, 3)));
   }, [member]);
+
+  useEffect(() => {
+    loadRecs();
+  }, [loadRecs]);
+
+  const markDone = async (targetId: string) => {
+    if (!member) return;
+    await fetch("/api/interactions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ memberId: member.id, targetId, kind: "121" }),
+    });
+    loadRecs();
+  };
 
   const chapters = useMemo(
     () => ["全部分會", ...Array.from(new Set(opps.map((o) => o.member.chapter).filter(Boolean)))],
@@ -254,6 +268,16 @@ export default function PlazaPage() {
                     <span className="ml-auto text-sm font-bold text-bni-red">{r.probability}%</span>
                   </div>
                   <p className="mt-2 line-clamp-2 text-xs leading-5 text-ink-soft">{r.reasons[0]}</p>
+                  <div className="mt-2 flex gap-2">
+                    <a href={`/partner/${r.targetId}`} className="chip !py-1 !text-[11px]">看商機卡</a>
+                    <button
+                      onClick={() => markDone(r.targetId)}
+                      className="chip !py-1 !text-[11px]"
+                      title="記錄一次 121，之後不再推薦此夥伴，直到他更新交流卡或商機"
+                    >
+                      ✓ 已完成 121
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

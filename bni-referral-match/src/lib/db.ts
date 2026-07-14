@@ -426,7 +426,8 @@ export async function createInteraction(input: {
     type: input.type,
     fromId: input.fromId,
     toId: input.toId,
-    date: new Date().toISOString().slice(0, 10),
+    // 存完整時間戳，方便判斷「已完成121」是否在對方最後更新之後（顯示時再截成日期）
+    date: new Date().toISOString(),
     note: input.note,
   };
   store.interactions.unshift(interaction);

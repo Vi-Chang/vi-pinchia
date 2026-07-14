@@ -9,7 +9,7 @@ import { Stars } from "@/components/ui/Stars";
 import { StatCard } from "@/components/ui/StatCard";
 import type { Interaction, MatchResult, Member } from "@/lib/types";
 
-type MatchWithMember = MatchResult & { target: Member };
+type MatchWithMember = MatchResult & { target: Member; dismissed121?: boolean };
 
 export default function DashboardPage() {
   const { member } = useAuth();
@@ -36,8 +36,20 @@ export default function DashboardPage() {
     };
   }, [interactions, member]);
 
-  const goodMatches = matches.filter((m) => m.score >= 45);
-  const today = matches[0];
+  // 已完成 121（暫不推薦）的夥伴不出現在推薦區
+  const recs = matches.filter((m) => !m.dismissed121);
+  const goodMatches = recs.filter((m) => m.score >= 45);
+  const today = recs[0];
+
+  const markDone = async (targetId: string) => {
+    if (!member) return;
+    await fetch("/api/interactions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ memberId: member.id, targetId, kind: "121" }),
+    });
+    fetch(`/api/matches?memberId=${member.id}`).then((r) => r.json()).then((d) => setMatches(d.matches ?? []));
+  };
 
   if (!member) return <AppShell><div /></AppShell>;
 
@@ -118,9 +130,16 @@ export default function DashboardPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-5 flex gap-3">
+                <div className="mt-5 flex flex-wrap gap-3">
                   <Link href="/matches" className="btn-gold">查看完整配對</Link>
                   <Link href="/analysis" className="btn-ghost">AI 深度分析</Link>
+                  <button
+                    onClick={() => markDone(today.targetId)}
+                    className="btn-ghost"
+                    title="記錄一次 121，之後不再推薦此夥伴，直到他更新交流卡或商機"
+                  >
+                    ✓ 已完成 121
+                  </button>
                 </div>
               </div>
             ) : (

@@ -24,7 +24,7 @@ import { SECTIONS, type Question } from "@/lib/questions";
 import type { CoopSuggestion } from "@/lib/suggestions";
 import type { Answer, MatchResult, Member } from "@/lib/types";
 
-type MatchRec = MatchResult & { target: Member; suggestion?: CoopSuggestion };
+type MatchRec = MatchResult & { target: Member; suggestion?: CoopSuggestion; dismissed121?: boolean };
 
 export default function CardPage() {
   return (
@@ -97,7 +97,7 @@ function CardEditor() {
     if (!member || section.id !== "s5" || recs !== null) return;
     fetch(`/api/matches?memberId=${member.id}&scope=all`)
       .then((r) => r.json())
-      .then((d) => setRecs((d.matches ?? []).slice(0, 4)))
+      .then((d) => setRecs((d.matches ?? []).filter((m: MatchRec) => !m.dismissed121).slice(0, 4)))
       .catch(() => setRecs([]));
   }, [member, section.id, recs]);
 

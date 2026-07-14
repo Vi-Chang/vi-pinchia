@@ -9,7 +9,7 @@ import type { PairInsight } from "@/lib/ai-insight";
 import type { CoopSuggestion } from "@/lib/suggestions";
 import type { MatchResult, Member } from "@/lib/types";
 
-type MatchWithMember = MatchResult & { target: Member; suggestion?: CoopSuggestion };
+type MatchWithMember = MatchResult & { target: Member; suggestion?: CoopSuggestion; dismissed121?: boolean };
 
 type InsightState =
   | { status: "loading" }
@@ -55,13 +55,30 @@ export default function MatchesPage() {
     }
   };
 
-  useEffect(() => {
-    if (!member || progress === null || progress < 80) return;
-    setMatches(null);
+  const loadMatches = () => {
+    if (!member) return;
     fetch(`/api/matches?memberId=${member.id}&scope=${scope}`)
       .then((r) => r.json())
       .then((d) => setMatches(d.matches ?? []));
+  };
+
+  useEffect(() => {
+    if (!member || progress === null || progress < 80) return;
+    setMatches(null);
+    loadMatches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [member, scope, progress]);
+
+  /** 已完成 121：記錄一次 121，之後不再推薦此夥伴，直到他更新交流卡或商機 */
+  const markDone = async (targetId: string) => {
+    if (!member) return;
+    await fetch("/api/interactions", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ memberId: member.id, targetId, kind: "121" }),
+    });
+    loadMatches();
+  };
 
   return (
     <AppShell>
@@ -71,7 +88,7 @@ export default function MatchesPage() {
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-ink">💎 商機配對引擎</h1>
               <p className="mt-1 text-sm text-ink-soft">
-                以主推專案與最新交流卡為最高優先，加上理想客戶、資源互補、過去合作、地區、產業與關鍵字媒合。
+                以主推專案與最新交流卡為最高優先媒合。按「✓ 已完成 121」後該夥伴暫不推薦，直到他更新交流卡或商機。
               </p>
             </div>
             {/* 多分會：可切換媒合範圍 */}
@@ -115,8 +132,8 @@ export default function MatchesPage() {
 
         <div className="stagger grid gap-4 md:grid-cols-2">
           {matches?.map((m, idx) => (
-            <div key={m.targetId} className="glass glass-hover relative overflow-hidden p-6">
-              {idx === 0 && (
+            <div key={m.targetId} className={`glass glass-hover relative overflow-hidden p-6 ${m.dismissed121 ? "opacity-70" : ""}`}>
+              {idx === 0 && !m.dismissed121 && (
                 <span className="absolute right-0 top-0 rounded-bl-2xl bg-gradient-to-r from-gold-400 to-gold-500 px-3 py-1 text-xs font-bold text-white">
                   最佳配對
                 </span>
@@ -137,6 +154,23 @@ export default function MatchesPage() {
                   <div className="text-2xl font-bold text-bni-red">{m.probability}%</div>
                   <div className="text-[10px] text-ink-muted">配對成功率</div>
                 </div>
+              </div>
+
+              {/* 已完成 121：記錄後暫不推薦，直到對方更新交流卡或商機 */}
+              <div className="mt-3">
+                {m.dismissed121 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    ✓ 已完成 121，暫不推薦（待對方更新）
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => markDone(m.targetId)}
+                    className="chip !text-xs"
+                    title="記錄一次 121，之後不再推薦此夥伴，直到他更新交流卡或商機"
+                  >
+                    ✓ 已完成 121
+                  </button>
+                )}
               </div>
 
               {/* Match Score bar */}
