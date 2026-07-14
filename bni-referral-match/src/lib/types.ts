@@ -110,7 +110,7 @@ export interface BizAlert {
   createdAt: string;
 }
 
-export type InteractionType = "121" | "referral" | "cooperation" | "shared_client";
+export type InteractionType = "121" | "referral" | "cooperation" | "potential";
 
 export interface Interaction {
   id: string;

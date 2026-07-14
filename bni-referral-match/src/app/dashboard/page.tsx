@@ -66,12 +66,12 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* 統計卡 */}
+        {/* 統計卡（點擊即可記錄或查看） */}
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="本月 121" value={stats.m121} unit="次" icon="🤝" accent="gold" hint="2026 年 7 月" />
-          <StatCard label="本月轉介" value={stats.ref} unit="筆" icon="🎯" accent="red" hint="含給出與收到" />
-          <StatCard label="交流卡完成率" value={`${progress}%`} icon="📋" accent="green" hint={progress >= 80 ? "資料完整，配對更精準" : "完成度越高，配對越準"} />
-          <StatCard label="商機配對數" value={goodMatches.length} unit="位" icon="💎" accent="blue" hint="45 分以上的高潛力對象" />
+          <StatCard label="本月 121" value={stats.m121} unit="次" icon="🤝" accent="gold" hint="2026 年 7 月" href="/network" cta="到關係圖記錄 121" />
+          <StatCard label="本月轉介" value={stats.ref} unit="筆" icon="🎯" accent="red" hint="含給出與收到" href="/network" cta="到關係圖記錄引薦" />
+          <StatCard label="交流卡完成率" value={`${progress}%`} icon="📋" accent="green" hint={progress >= 80 ? "資料完整，配對更精準" : "完成度越高，配對越準"} href="/card" cta="填寫交流卡" />
+          <StatCard label="商機配對數" value={goodMatches.length} unit="位" icon="💎" accent="blue" hint="45 分以上的高潛力對象" href="/matches" cta="查看完整配對" />
         </section>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">

@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Interaction, InteractionType, Member } from "@/lib/types";
 
-const EDGE_STYLE: Record<InteractionType, { color: string; dash?: string; width: number; label: string }> = {
+type EdgeStyle = { color: string; dash?: string; width: number; label: string };
+const EDGE_STYLE: Record<InteractionType, EdgeStyle> = {
   "121": { color: "#C9A227", width: 1.5, label: "121" },
   referral: { color: "#c8102e", width: 2.5, label: "轉介" },
   cooperation: { color: "#2a78d6", width: 2, label: "合作" },
-  shared_client: { color: "#898781", dash: "4 4", width: 1.5, label: "共同客戶" },
+  potential: { color: "#1baf7a", dash: "4 4", width: 1.5, label: "可能產生合作" },
 };
+/** 安全取樣式：未知或舊版型別（如 shared_client）回退為「可能產生合作」，避免畫面壞掉 */
+const edgeStyle = (t: InteractionType): EdgeStyle => EDGE_STYLE[t] ?? EDGE_STYLE.potential;
 
 interface Node {
   member: Member;
@@ -144,7 +147,7 @@ export function NetworkGraph({
           const a = byId.get(e.a);
           const b = byId.get(e.b);
           if (!a || !b) return null;
-          const s = EDGE_STYLE[e.type];
+          const s = edgeStyle(e.type);
           const dim = focusId && e.a !== focusId && e.b !== focusId;
           return (
             <line
@@ -226,4 +229,4 @@ export function NetworkGraph({
   );
 }
 
-export { EDGE_STYLE };
+export { EDGE_STYLE, edgeStyle };

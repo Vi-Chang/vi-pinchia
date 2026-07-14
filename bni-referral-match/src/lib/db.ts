@@ -412,6 +412,43 @@ export async function getInteractions(): Promise<Interaction[]> {
   return (await getStore()).interactions;
 }
 
+let intSeq = 0;
+/** 記錄一筆互動關係（121／引薦／合作／可能產生合作），寫回 Supabase */
+export async function createInteraction(input: {
+  type: Interaction["type"];
+  fromId: string;
+  toId: string;
+  note?: string;
+}): Promise<Interaction> {
+  const store = await getStore();
+  const interaction: Interaction = {
+    id: `int-${Date.now()}-${intSeq++}`,
+    type: input.type,
+    fromId: input.fromId,
+    toId: input.toId,
+    date: new Date().toISOString().slice(0, 10),
+    note: input.note,
+  };
+  store.interactions.unshift(interaction);
+  await persist("interactions", interactionToRow(interaction));
+  return interaction;
+}
+
+/** 刪除自己記錄的互動（使用者主動操作） */
+export async function deleteInteraction(id: string, requesterId: string): Promise<{ ok: boolean; error?: string }> {
+  const store = await getStore();
+  const it = store.interactions.find((i) => i.id === id);
+  if (!it) return { ok: false, error: "找不到這筆互動" };
+  const requester = store.members.find((m) => m.id === requesterId);
+  const involved = it.fromId === requesterId || it.toId === requesterId;
+  if (!involved && requester?.role !== "admin") {
+    return { ok: false, error: "只能刪除與自己相關的互動" };
+  }
+  store.interactions = store.interactions.filter((i) => i.id !== id);
+  await removeRows("interactions", "id", [id]);
+  return { ok: true };
+}
+
 export async function updateMember(member: Member): Promise<Member> {
   const store = await getStore();
   const idx = store.members.findIndex((m) => m.id === member.id);

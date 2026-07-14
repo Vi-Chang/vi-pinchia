@@ -546,10 +546,10 @@ export const DEMO_INTERACTIONS: Interaction[] = [
   { id: "c2", type: "cooperation", fromId: "m9", toId: "m10", date: "2026-07-01", note: "中秋聯名禮盒" },
   { id: "c3", type: "cooperation", fromId: "m7", toId: "m8", date: "2026-06-20", note: "數位轉型提案小組" },
   { id: "c4", type: "cooperation", fromId: "m5", toId: "m6", date: "2026-06-10", note: "創業法稅一條龍" },
-  // --- 共同客戶 ---
-  { id: "s1", type: "shared_client", fromId: "m3", toId: "m4", date: "2026-06-05", note: "連鎖烘焙展店案" },
-  { id: "s2", type: "shared_client", fromId: "m1", toId: "m2", date: "2026-06-08", note: "復健診所開業案" },
-  { id: "s3", type: "shared_client", fromId: "m7", toId: "m9", date: "2026-06-12", note: "烘焙品牌行銷案" },
+  // --- 可能產生合作 ---
+  { id: "s1", type: "potential", fromId: "m3", toId: "m4", date: "2026-06-05", note: "連鎖烘焙展店案" },
+  { id: "s2", type: "potential", fromId: "m1", toId: "m2", date: "2026-06-08", note: "復健診所開業案" },
+  { id: "s3", type: "potential", fromId: "m7", toId: "m9", date: "2026-06-12", note: "烘焙品牌行銷案" },
 ];
 
 /** 示範專案（Projects）：每位會員可建立多個專案 */
