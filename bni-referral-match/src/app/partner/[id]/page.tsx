@@ -111,7 +111,7 @@ function PartnerDetail({ id }: { id: string }) {
 
         {loaded && !target && (
           <div className="glass p-10 text-center text-sm text-ink-muted">
-            找不到這位會員。<Link href="/plaza" className="ml-1 font-semibold text-bni-red">回商機廣場</Link>
+            找不到這位會員。<Link href="/plaza" className="ml-1 font-semibold text-bni-red">回想要引薦或合作</Link>
           </div>
         )}
 
@@ -218,7 +218,7 @@ function PartnerDetail({ id }: { id: string }) {
             {/* 開放中的合作 */}
             {opps.length > 0 && (
               <div className="glass animate-fade-up p-7">
-                <h2 className="font-bold text-ink">🏪 正在開放的合作</h2>
+                <h2 className="font-bold text-ink">🤝 正在開放的引薦/合作</h2>
                 <div className="mt-4 space-y-3">
                   {opps.map((o) => (
                     <div key={o.id} className="rounded-2xl bg-white/50 p-4">

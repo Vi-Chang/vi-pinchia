@@ -69,8 +69,8 @@ export default function AlertsPage() {
             目前沒有新的快訊。更新你的
             <Link href="/card" className="mx-1 font-semibold text-bni-red">交流卡</Link>
             或到
-            <Link href="/plaza" className="mx-1 font-semibold text-bni-red">商機廣場</Link>
-            發布合作，AI 會立即為你重新計算媒合。
+            <Link href="/plaza" className="mx-1 font-semibold text-bni-red">想要引薦或合作</Link>
+            發布引薦/合作，AI 會立即為你重新計算媒合。
           </div>
         )}
         {alerts.map((a) => (

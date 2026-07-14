@@ -87,7 +87,7 @@ export default function LoginPage() {
               121 都變成有準備的商機。
             </p>
             <div className="mt-8 flex flex-wrap gap-2">
-              {["AI 商機配對", "商機廣場", "關係網絡圖", "即時儲存"].map((t) => (
+              {["AI 商機配對", "想要引薦或合作", "關係網絡圖", "即時儲存"].map((t) => (
                 <span key={t} className="tag-gold">
                   {t}
                 </span>

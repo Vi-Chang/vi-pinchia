@@ -144,20 +144,21 @@ export default function PlazaPage() {
         <div className="glass animate-fade-up p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-ink">🏪 商機廣場</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-ink">🤝 想要引薦或合作</h1>
               <p className="mt-1 text-sm text-ink-soft">
-                所有會員正在開放的合作與商機，找到就直接出手。
+                所有會員正在開放的引薦與合作，找到就直接出手。
+                你手上有多個專案或引薦？除了交流卡自動上架，也可以按「＋ 新增」多加幾張。
               </p>
             </div>
             <div className="flex gap-2">
               <button onClick={() => setMine(!mine)} className={mine ? "chip chip-on" : "chip"}>
-                我的合作
+                我的引薦/合作
               </button>
               <button
                 onClick={() => setDraft({ title: "", content: "", type: "" })}
                 className="btn-primary !px-5 !py-2.5 !text-sm"
               >
-                ＋ 新增合作
+                ＋ 新增引薦/合作
               </button>
             </div>
           </div>
@@ -208,7 +209,7 @@ export default function PlazaPage() {
         {/* 新增／編輯表單 */}
         {draft && (
           <div className="glass animate-fade-up space-y-4 p-7">
-            <h2 className="text-lg font-bold text-ink">{draft.id ? "編輯合作" : "新增合作"}</h2>
+            <h2 className="text-lg font-bold text-ink">{draft.id ? "編輯引薦/合作" : "新增引薦/合作"}</h2>
             <div>
               <label className="label">合作標題 *</label>
               <input className="field" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="例：中秋聯名禮盒徵異業夥伴" />
@@ -263,7 +264,7 @@ export default function PlazaPage() {
         <div className="stagger grid gap-4 md:grid-cols-2">
           {list.length === 0 && (
             <div className="glass col-span-full p-10 text-center text-sm text-ink-muted">
-              {mine ? "你還沒有發布合作，點「＋ 新增合作」開始。" : "沒有符合條件的商機。"}
+              {mine ? "你還沒有發布引薦/合作，點「＋ 新增引薦/合作」開始。" : "沒有符合條件的引薦/合作。"}
             </div>
           )}
           {list.map((o) => {

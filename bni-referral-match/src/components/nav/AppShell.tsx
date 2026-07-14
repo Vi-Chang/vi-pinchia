@@ -9,7 +9,7 @@ import { SiteFooter } from "@/components/ui/SiteFooter";
 
 const NAV = [
   { href: "/dashboard", label: "首頁", icon: "🏠" },
-  { href: "/plaza", label: "商機廣場", icon: "🏪" },
+  { href: "/plaza", label: "引薦或合作", icon: "🤝" },
   { href: "/cards", label: "交流卡管理", icon: "🗂️" },
   { href: "/card", label: "填寫交流卡", icon: "📋" },
   { href: "/members", label: "會員資料", icon: "👥" },

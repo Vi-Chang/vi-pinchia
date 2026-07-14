@@ -986,7 +986,7 @@ export async function saveOpportunity(
     await persist("opportunities", opportunityToRow(opp));
     const who = nameOf(store.members, input.memberId);
     // 新增商機 → AI 立即重新計算媒合
-    await recomputeAlerts(input.memberId, `${who}在商機廣場發布了「${opp.title}」`);
+    await recomputeAlerts(input.memberId, `${who}發布了引薦/合作「${opp.title}」`);
   }
   return opp;
 }
@@ -1040,7 +1040,7 @@ export async function expressInterest(oppId: string, fromMemberId: string): Prom
     },
     probability: 0,
     reasons: [`${from.name}對你的合作「${opp.title}」表達了合作意願`, `聯絡方式：${from.phone}${from.line ? `｜LINE：${from.line}` : ""}`],
-    trigger: `商機廣場：${from.name}點擊了「我要合作」`,
+    trigger: `想要引薦或合作：${from.name}點擊了「我要合作」`,
     createdAt: new Date().toISOString(),
   };
   store.alerts.unshift(alert);
