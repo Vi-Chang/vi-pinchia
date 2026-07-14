@@ -28,6 +28,16 @@ for (const sql of [
   try { db.exec(sql); } catch {}
 }
 
+// 訪客紀錄：進站時登記貴姓與行業
+db.exec(`
+  CREATE TABLE IF NOT EXISTS visitors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    surname TEXT NOT NULL,
+    industry TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
+  )
+`);
+
 function validate(name, message) {
   if (!name || !message) return '名字和留言都要填喔';
   if (name.length > 30) return '名字最多 30 個字';
@@ -95,6 +105,27 @@ app.delete('/api/messages/:id', (req, res) => {
 
   db.prepare('DELETE FROM messages WHERE id = ?').run(own.id);
   res.json({ ok: true });
+});
+
+// 訪客登記：記錄貴姓與行業，回傳歡迎資訊
+app.post('/api/visitors', (req, res) => {
+  const surname = (req.body?.surname ?? '').toString().trim();
+  const industry = (req.body?.industry ?? '').toString().trim();
+  if (!surname || !industry) return res.status(400).json({ error: '請填寫貴姓與行業' });
+  if (surname.length > 10) return res.status(400).json({ error: '貴姓最多 10 個字' });
+  if (industry.length > 30) return res.status(400).json({ error: '行業最多 30 個字' });
+
+  const info = db.prepare('INSERT INTO visitors (surname, industry) VALUES (?, ?)').run(surname, industry);
+  const row = db.prepare('SELECT id, surname, industry, created_at FROM visitors WHERE id = ?').get(info.lastInsertRowid);
+  const { c } = db.prepare('SELECT COUNT(*) AS c FROM visitors').get();
+  res.status(201).json({ ...row, total: c });
+});
+
+// 訪客清單（給版主看有誰來過）
+app.get('/api/visitors', (req, res) => {
+  const rows = db.prepare('SELECT id, surname, industry, created_at FROM visitors ORDER BY id DESC LIMIT 200').all();
+  const { c } = db.prepare('SELECT COUNT(*) AS c FROM visitors').get();
+  res.json({ total: c, visitors: rows });
 });
 
 app.use(express.static(__dirname));

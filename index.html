@@ -468,6 +468,78 @@
     letter-spacing: 1px;
     background: var(--card);
   }
+
+  /* 歡迎訪客彈窗 */
+  .welcome-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(74, 59, 50, 0.45);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .welcome-card {
+    background: var(--card);
+    border-radius: 24px;
+    max-width: 380px;
+    width: 100%;
+    padding: 32px 28px;
+    box-shadow: 0 24px 60px rgba(74, 59, 50, 0.3);
+    text-align: center;
+    animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .welcome-card h3 { font-size: 22px; font-weight: 700; color: var(--text); }
+  .welcome-card p { margin-top: 10px; font-size: 14px; line-height: 1.7; color: var(--text-soft); }
+  .welcome-card input {
+    width: 100%;
+    margin-top: 14px;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid #eeddd0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s ease;
+  }
+  .welcome-card input:focus { border-color: var(--accent-deep); }
+  .welcome-card .w-btn {
+    width: 100%;
+    margin-top: 16px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+    background: linear-gradient(135deg, #e08b5f, #c96f42);
+    border: none;
+    border-radius: 999px;
+    padding: 13px 0;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .welcome-card .w-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(201, 111, 66, 0.3); }
+  .welcome-card .w-btn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+  .welcome-card .w-skip {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text-soft);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .welcome-card .w-error { margin-top: 8px; font-size: 13px; color: var(--accent-deep); min-height: 18px; }
+  .welcome-card .w-emoji { font-size: 40px; }
 </style>
 </head>
 <body>
@@ -776,6 +848,87 @@
   });
 
   load();
+})();
+</script>
+
+<!-- 歡迎訪客彈窗 -->
+<div class="welcome-overlay" id="welcomeOverlay" style="display:none;">
+  <div class="welcome-card" id="welcomeCard">
+    <div class="w-emoji">👋</div>
+    <h3>歡迎光臨！</h3>
+    <p>我是張婕，很開心你來看我的介紹頁～<br>可以告訴我怎麼稱呼你、以及你從事什麼行業嗎？</p>
+    <input type="text" id="wSurname" maxlength="10" placeholder="貴姓（例：王）" autocomplete="off">
+    <input type="text" id="wIndustry" maxlength="30" placeholder="您從事的行業（例：室內設計）" autocomplete="off">
+    <p class="w-error" id="wError"></p>
+    <button class="w-btn" id="wSubmit">送出，進入 →</button>
+    <button class="w-skip" id="wSkip">先看看就好</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const KEY = 'vp_visitor_greeted';
+  const overlay = document.getElementById('welcomeOverlay');
+  const card = document.getElementById('welcomeCard');
+  const surnameEl = document.getElementById('wSurname');
+  const industryEl = document.getElementById('wIndustry');
+  const errEl = document.getElementById('wError');
+  const submitBtn = document.getElementById('wSubmit');
+  const skipBtn = document.getElementById('wSkip');
+
+  // 已登記過就不再打擾
+  let greeted = null;
+  try { greeted = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
+  if (!greeted) {
+    setTimeout(() => {
+      overlay.style.display = 'flex';
+      surnameEl.focus();
+    }, 700);
+  }
+
+  const close = () => { overlay.style.display = 'none'; };
+
+  skipBtn.addEventListener('click', () => {
+    localStorage.setItem(KEY, JSON.stringify({ skipped: true }));
+    close();
+  });
+
+  surnameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') industryEl.focus(); });
+  industryEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); });
+
+  submitBtn.addEventListener('click', async () => {
+    const surname = surnameEl.value.trim();
+    const industry = industryEl.value.trim();
+    if (!surname || !industry) { errEl.textContent = '貴姓與行業都填一下嘛 😊'; return; }
+    submitBtn.disabled = true;
+    errEl.textContent = '';
+    try {
+      const res = await fetch('/api/visitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ surname, industry })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '送出失敗');
+      localStorage.setItem(KEY, JSON.stringify({ surname, industry }));
+      // 個人化歡迎
+      card.innerHTML =
+        '<div class="w-emoji">🎉</div>' +
+        '<h3>' + escapeHtml(surname) + ' 您好！</h3>' +
+        '<p>很高興認識從事「<strong style="color:var(--accent-deep)">' + escapeHtml(industry) + '</strong>」的你！<br>' +
+        '歡迎慢慢參觀我的介紹，也別忘了在下方留言板打聲招呼 😊</p>' +
+        '<button class="w-btn" id="wClose">開始參觀 →</button>';
+      document.getElementById('wClose').addEventListener('click', close);
+      setTimeout(close, 5000);
+    } catch (e) {
+      errEl.textContent = e.message || '送出失敗，請再試一次';
+      submitBtn.disabled = false;
+    }
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
 })();
 </script>
 </body>
