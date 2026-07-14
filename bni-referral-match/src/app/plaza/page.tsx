@@ -290,6 +290,11 @@ export default function PlazaPage() {
                       範本
                     </span>
                   )}
+                  {o.id.startsWith("auto-") && (
+                    <span className="shrink-0 rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-700" title="由交流卡「正在開放的合作或專案」自動建立">
+                      來自交流卡
+                    </span>
+                  )}
                   <span className={`shrink-0 rounded-full px-3 py-1 text-xs font-bold ${open ? "bg-emerald-100 text-emerald-700" : "bg-ink/10 text-ink-soft"}`}>
                     {open ? "開放中" : "已結束"}
                   </span>

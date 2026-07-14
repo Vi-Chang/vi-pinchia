@@ -555,6 +555,10 @@ export async function saveCard(
   target.updatedAt = now;
   target.updatedBy = who;
   await persist("card_versions", versionToRow(target));
+  // 使用中的交流卡填了「正在開放的合作或專案」→ 自動同步到商機廣場
+  if (target.status === "active") {
+    await syncAutoOpportunity(memberId, answers);
+  }
   // 真實填卡人數超過 5 人 → 自動移除範例人物
   await purgeDemoIfReady();
   // 交流卡更新 → AI 立即重新計算媒合
@@ -894,6 +898,51 @@ export async function setMemberRole(
 }
 
 /* ═══════════ 商機廣場（Opportunity Plaza） ═══════════ */
+
+/**
+ * 依交流卡「正在開放的合作或專案」自動同步商機廣場卡片。
+ * 每位會員一張自動卡（id = auto-${memberId}）：有內容就建立／更新為開放中，
+ * 清空則關閉（不刪除，保留歷史）。
+ */
+async function syncAutoOpportunity(memberId: string, answers: ExchangeCard["answers"]): Promise<void> {
+  const store = await getStore();
+  const raw = answers.s6_open_projects;
+  const text = typeof raw === "string" ? raw.trim() : "";
+  const id = `auto-${memberId}`;
+  const existing = store.opportunities.find((o) => o.id === id);
+  const now = new Date().toISOString();
+
+  if (text) {
+    const firstLine = text.split(/\r?\n/)[0].trim();
+    const title = firstLine.length > 30 ? `${firstLine.slice(0, 30)}…` : firstLine || "開放合作徵求";
+    if (existing) {
+      existing.title = title;
+      existing.content = text;
+      existing.status = "open";
+      existing.updatedAt = now;
+      await persist("opportunities", opportunityToRow(existing));
+    } else {
+      const opp: Opportunity = {
+        id,
+        memberId,
+        title,
+        content: text,
+        type: "其他",
+        status: "open",
+        createdAt: now,
+        updatedAt: now,
+        isTemplate: false,
+      };
+      store.opportunities.push(opp);
+      await persist("opportunities", opportunityToRow(opp));
+    }
+  } else if (existing && existing.status === "open") {
+    // 交流卡清空 → 關閉自動卡（保留不刪）
+    existing.status = "closed";
+    existing.updatedAt = now;
+    await persist("opportunities", opportunityToRow(existing));
+  }
+}
 
 export async function getOpportunities(): Promise<(Opportunity & { member: Member })[]> {
   const store = await getStore();
