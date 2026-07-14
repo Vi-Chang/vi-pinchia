@@ -161,15 +161,12 @@ export default function LoginPage() {
                     />
                     記住我
                   </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      alert("示範模式尚未開通 Email 重設。請聯絡分會管理員協助重設密碼。")
-                    }
+                  <Link
+                    href="/reset"
                     className="text-ink-muted underline-offset-2 hover:text-bni-red hover:underline"
                   >
                     忘記密碼？
-                  </button>
+                  </Link>
                 </div>
                 {error && <p className="text-sm text-bni-red">{error}</p>}
                 <button onClick={doLogin} disabled={busy} className="btn-primary w-full disabled:opacity-50">

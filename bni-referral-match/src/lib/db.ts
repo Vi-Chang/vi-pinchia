@@ -800,6 +800,31 @@ export async function verifyLogin(email: string, password: string): Promise<Memb
   return store.members.find((m) => m.id === acc.memberId) ?? null;
 }
 
+/**
+ * 忘記密碼：以 Email 找出帳號，比對「帳號登記的手機號碼」驗證為本人後，重設密碼。
+ * 重設碼（0000）由 API 端把關；此處只負責身分比對與寫入新密碼。
+ * 只換密碼（新 salt + hash），不動任何其他會員資料，符合資料保全鐵律。
+ */
+export async function resetPasswordByPhone(
+  email: string,
+  phone: string,
+  newPassword: string
+): Promise<{ member?: Member; error?: string }> {
+  const store = await getStore();
+  const acc = store.accounts.find((a) => a.email === email.trim().toLowerCase());
+  const member = acc ? store.members.find((m) => m.id === acc.memberId) : undefined;
+  if (!acc || !member) return { error: "查無此 Email 帳號，請確認或改用註冊" };
+  // 只留數字比對，容忍空格、-、+886 等格式差異
+  const digits = (s: string) => s.replace(/\D/g, "");
+  if (!member.phone || digits(member.phone) !== digits(phone)) {
+    return { error: "手機號碼與帳號登記的不符，無法確認身分" };
+  }
+  acc.salt = randomBytes(8).toString("hex");
+  acc.passwordHash = hashPassword(newPassword, acc.salt);
+  await persist("accounts", accountToRow(acc));
+  return { member };
+}
+
 export interface RegisterInput {
   name: string;
   chapter: string;
@@ -879,6 +904,67 @@ export async function deleteMember(
   await removeRows("members", "id", [id]);
   await removeRows("biz_alerts", "id", removedAlertIds);
   return { ok: true };
+}
+
+/* ═══════════ Supabase 用量總覽（後台監控） ═══════════ */
+
+export interface UsageTable {
+  key: string;
+  label: string;
+  rows: number;
+  bytes: number; // 以 JSON 位元組估算（非資料庫實際佔用，僅供趨勢參考）
+}
+
+export interface UsageStats {
+  supabase: boolean; // 是否已連 Supabase（false = 記憶體示範模式）
+  tables: UsageTable[];
+  totalRows: number;
+  totalBytes: number;
+  freeLimitBytes: number; // Supabase 免費方案資料庫上限
+  lastActivity: string | null; // 最近一次內容異動時間（ISO）
+}
+
+/**
+ * 後台用量總覽：各資料表筆數與估算資料量、免費方案上限對照、最後活動時間。
+ * 純讀取記憶體中的資料集，不呼叫外部服務、不需額外金鑰。
+ * 位元組為 JSON 估算值（Postgres 實際佔用含索引與型別開銷會不同），僅供掌握規模與趨勢。
+ */
+export async function getUsageStats(): Promise<UsageStats> {
+  const store = await getStore();
+  const defs: { key: keyof Store; label: string }[] = [
+    { key: "members", label: "會員" },
+    { key: "accounts", label: "登入帳號" },
+    { key: "versions", label: "交流卡版本" },
+    { key: "projects", label: "專案" },
+    { key: "opportunities", label: "引薦／合作卡" },
+    { key: "interactions", label: "互動紀錄" },
+    { key: "alerts", label: "商機快訊" },
+  ];
+  const tables: UsageTable[] = defs.map(({ key, label }) => {
+    const rows = store[key] as unknown[];
+    return { key, label, rows: rows.length, bytes: Buffer.byteLength(JSON.stringify(rows)) };
+  });
+  const totalRows = tables.reduce((s, t) => s + t.rows, 0);
+  const totalBytes = tables.reduce((s, t) => s + t.bytes, 0);
+
+  // 最近活動：取各類內容時間欄位的最大值（判斷距離「7 天無活動被暫停」還有多久）
+  const times: string[] = [
+    ...store.versions.map((v) => v.updatedAt),
+    ...store.projects.map((p) => p.updatedAt),
+    ...store.opportunities.map((o) => o.updatedAt),
+    ...store.interactions.map((i) => i.date),
+    ...store.alerts.map((a) => a.createdAt),
+  ].filter(Boolean);
+  const lastActivity = times.length ? times.reduce((a, b) => (a > b ? a : b)) : null;
+
+  return {
+    supabase: hasSupabase(),
+    tables,
+    totalRows,
+    totalBytes,
+    freeLimitBytes: 500 * 1024 * 1024, // Supabase 免費方案：資料庫 500MB
+    lastActivity,
+  };
 }
 
 /** 管理員開通／收回其他會員的管理員權限 */

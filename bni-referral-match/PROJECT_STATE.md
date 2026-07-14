@@ -1,6 +1,6 @@
 # PROJECT_STATE.md — 商務夥伴商機交流平台
 
-> 最後更新：2026-07-13。此文件為專案完整現況快照，供下次開啟專案時快速掌握全貌。
+> 最後更新：2026-07-15。此文件為專案完整現況快照，供下次開啟專案時快速掌握全貌。
 
 ---
 
@@ -35,7 +35,8 @@
 ## 2. 已完成功能
 
 ### 會員與帳號
-- **Email 帳號系統**：註冊（分會通行密碼 + 姓名/分會/Email/手機/產業/密碼 + 選填公司/LINE + 同意條款）、Email+密碼登入、記住我、忘記密碼（示範提示）。
+- **Email 帳號系統**：註冊（分會通行密碼 + 姓名/分會/Email/手機/產業/密碼 + 選填公司/LINE + 同意條款）、Email+密碼登入、記住我。
+- **忘記密碼（自助重設）**：`/reset` 頁填 Email + 註冊手機號 + 重設碼（`0000`，可用 `RESET_CODE` 環境變數覆寫）→ 手機號與帳號登記相符即驗證本人 → 設定新密碼並自動登入。實際把關的是「手機號需相符」；只換密碼（新 salt+hash），不動其他資料。
 - **伺服器端 session 驗證**：登入/註冊發 HMAC 簽章 httpOnly cookie；所有資料 API 沒有有效 session 一律 401（擋爬蟲/AI 工具）。`/api/auth/me` 驗證、`/api/auth/logout` 清 cookie。
 - **首次登入引導**（單步）：只填「我的專長 / 我提供的服務」，完成直接進首頁（可跳過）。
 - **會員資料總覽頁**（/members）：全體名錄、搜尋、聯絡資訊、範例標註、已填卡統計；每人可進「商機卡」。
@@ -79,6 +80,7 @@
 ### 搜尋與後台
 - **搜尋**（/search）：姓名/公司/產業/服務/需求/資源/關鍵字 + 分會篩選。
 - **管理後台**（/admin）：分會儀表板（會員數/引薦/121/產業結構/資源供需/雷達圖/熱力圖），及「所有填單者資料」（展開看聯絡資訊+完整交流卡回答，管理員可刪會員）。
+- **資料用量總覽**（/admin 內）：各資料表筆數與估算資料量（JSON 位元組）、占 Supabase 免費方案上限（500MB）%、最後活動時間與「7 天無活動暫停」提醒、是否已連 Supabase。純讀記憶體資料集，零外部呼叫（`getUsageStats()`）。
 
 ### 範例資料機制
 - 內建 10 位示範會員（+管理員）標 `is_demo`，名字旁顯示「（範例）」。
@@ -91,9 +93,9 @@
 
 ## 3. 尚未完成功能 / 已知限制
 
-- **忘記密碼**：目前只是示範提示（無寄信）。需接 Supabase Auth 或 Email 服務才能真正重設。
+- **忘記密碼**：已可自助重設（Email+登記手機號+重設碼 0000）。因 0000 為固定公開碼，實際安全性靠「手機號需相符」；若要更嚴，未來可改寄簡訊/Email 驗證碼。
 - **獨立專案頁**：已移除 UI（避免與商機廣場重複）；專案主要靠交流卡的主推專案。若要完整的多專案管理 UI 需重建。
-- **AI 分析頁（/analysis）**：仍用舊的規則引擎七面向 + 舊 `/api/analysis`（該 API 有一段舊 prompt，選用 Anthropic）；與新的 `/api/ai-insight`（夥伴商機卡/配對頁用）並存，未整併。
+- **AI 分析整併（已處理主要痛點）**：`/api/analysis` 與 `/api/ai-insight` 現在共用 `ai-insight.ts` 的單一 `callClaude` 與統一模型 `anthropicModel()`（預設 `claude-sonnet-5`，`ANTHROPIC_MODEL` 可覆寫）。分析頁的 AI 敘事已從「每次載入自動呼叫」改為「按需 + 快取」（修掉成本漏洞）。兩個端點仍依用途分開（單人總結 vs 兩人深度分析），非合併為一。
 - **per-object 授權**：資料 API 已「要求登入」，但尚未逐一驗證「只能改自己的資料」（例如理論上登入會員可帶他人 memberId 改卡）。管理操作已用 session 身分把關；一般會員資料寫入的細緻授權為未來強化項。
 - **出貨/收件核對工具**（牙技所需求）：使用者提過但尚未定案、未開發。
 - **Supabase 免費方案**：7 天無活動可能被暫停（有人使用即不會）。
@@ -111,6 +113,7 @@
 | `/api/auth/logout` | POST | 清除 session cookie |
 | `/api/auth/me` | GET | 驗證 cookie，回最新 member（失效 401） |
 | `/api/auth/onboarding` | POST | 完成首次引導（memberId 取自 session） |
+| `/api/auth/reset` | POST | 忘記密碼重設（免登入）：Email+手機號+重設碼(0000) 驗證本人 → 換密碼 → 發 cookie 自動登入 |
 | `/api/members` | GET | 全體會員 + 已填卡統計 |
 | `/api/members` | PUT | 更新會員資料 |
 | `/api/members` | PATCH | 管理員開通/收回 admin（requester=session） |
@@ -120,7 +123,8 @@
 | `/api/card-versions` | GET/POST/PATCH/DELETE | 版本清單/建立/更新標題狀態/刪除 |
 | `/api/projects` | GET/POST/DELETE | 專案清單/新增更新/刪除 |
 | `/api/matches` | GET | 配對結果（memberId + scope=all/chapter）；回 `dismissed121` 旗標；無 memberId 回全體 top3 |
-| `/api/analysis` | GET | 七大面向規則引擎分析（舊） |
+| `/api/analysis` | GET | 七大面向規則引擎分析（本地零成本，**不再呼叫 Claude**） |
+| `/api/analysis` | POST | AI 深度總結（按需，Anthropic，需 memberId，含快取） |
 | `/api/ai-insight` | POST | AI 深度分析（Anthropic，需 memberId/targetId，含快取） |
 | `/api/plaza` | GET/POST/PATCH/DELETE | 商機清單/新增更新/改狀態/刪除（requester=session） |
 | `/api/plaza/interest` | POST | 我要合作（fromId=session，通知發布者） |
@@ -179,13 +183,13 @@
 
 ## 7. 待辦事項（優先序）
 
-1. **忘記密碼/正式 Auth**：接 Supabase Auth 或寄信服務，做真正的密碼重設。
+1. ~~**忘記密碼/正式 Auth**~~：✅ 已做自助重設（手機號+重設碼 0000）。未來可升級為簡訊/Email 驗證碼。
 2. **per-object 授權強化**：資料寫入 API 驗證 memberId===session（或為對象擁有者/admin），封住「帶他人 id 改資料」。
-3. **整併 AI 分析**：`/api/analysis`（舊七面向）與 `/api/ai-insight`（新深度分析）統一。
+3. ~~**整併 AI 分析**~~：✅ 已統一 Claude 呼叫路徑與模型、修掉分析頁自動扣費；兩端點依用途保留。
 4. **出貨/收件核對工具**：待使用者定義需求（新獨立工具，可能 OCR 比對單號+診所）。
 5. **會員資料/交流卡匯出**：使用者要求時，用管理員身分正規匯出（Excel/PDF/純文字）。
 6. **Prisma 清理**：移除未使用的 prisma 產物，避免誤導。
-7. **監控 Supabase 免費方案**用量/暫停風險。
+7. ~~**監控 Supabase 免費方案用量/暫停風險**~~：✅ 後台已有「資料用量總覽」（筆數/估算量/上限%/最後活動/暫停提醒）。
 
 ---
 

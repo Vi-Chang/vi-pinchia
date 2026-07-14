@@ -14,6 +14,9 @@ const MAX_AGE_SEC = 30 * 24 * 60 * 60; // 30 天
 /** 分會通行密碼（註冊時於伺服器端驗證） */
 export const ACCESS_CODE = "3345678";
 
+/** 忘記密碼重設碼：搭配「登記手機號」驗證本人後即可重設密碼。可用 RESET_CODE 環境變數覆寫（預設 0000）。 */
+export const RESET_CODE = process.env.RESET_CODE || "0000";
+
 function secret(): string {
   return (
     process.env.AUTH_SECRET ||

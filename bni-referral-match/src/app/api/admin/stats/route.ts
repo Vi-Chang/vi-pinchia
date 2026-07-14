@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCards, getInteractions, getMember, getMembers } from "@/lib/db";
+import { getCards, getInteractions, getMember, getMembers, getUsageStats } from "@/lib/db";
 import { getSessionMemberId } from "@/lib/auth";
 import {
   activityHeatmap,
@@ -19,15 +19,17 @@ export async function GET(req: NextRequest) {
   if (!uid) return NextResponse.json({ error: "未登入" }, { status: 401 });
   const requester = await getMember(uid);
   if (requester?.role !== "admin") return NextResponse.json({ error: "僅管理員可存取" }, { status: 403 });
-  const [members, cards, interactions] = await Promise.all([
+  const [members, cards, interactions, usage] = await Promise.all([
     getMembers(),
     getCards(),
     getInteractions(),
+    getUsageStats(),
   ]);
 
   const heat = activityHeatmap(members, interactions);
 
   return NextResponse.json({
+    usage,
     memberCount: members.length,
     cardDone: cards.filter((c) => cardProgress(c) >= 80).length,
     referralTotal: interactions.filter((i) => i.type === "referral").length,

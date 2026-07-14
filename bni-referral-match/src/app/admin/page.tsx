@@ -25,8 +25,23 @@ interface AdminStats {
   helpRank: { label: string; value: number }[];
   radar: { label: string; value: number }[];
   heatmap: { weeks: string[]; rows: { label: string; values: number[] }[] };
+  usage: {
+    supabase: boolean;
+    tables: { key: string; label: string; rows: number; bytes: number }[];
+    totalRows: number;
+    totalBytes: number;
+    freeLimitBytes: number;
+    lastActivity: string | null;
+  };
   members: any[];
   cards: ExchangeCard[];
+}
+
+/** 位元組轉人類可讀 */
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
 export default function AdminPage() {
@@ -90,6 +105,80 @@ export default function AdminPage() {
                 accent="gold"
               />
             </section>
+
+            {/* Supabase 資料用量總覽 */}
+            {stats.usage && (() => {
+              const u = stats.usage;
+              const pct = (u.totalBytes / u.freeLimitBytes) * 100;
+              const pctText = pct < 0.1 ? "< 0.1%" : `${pct.toFixed(1)}%`;
+              const daysIdle = u.lastActivity
+                ? Math.floor((Date.now() - new Date(u.lastActivity).getTime()) / 86400000)
+                : null;
+              return (
+                <section className="glass animate-fade-up p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="font-bold text-ink">🗄️ 資料用量總覽</h2>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                        u.supabase ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {u.supabase ? "已連 Supabase（永久儲存）" : "記憶體示範模式（未連 Supabase）"}
+                    </span>
+                  </div>
+
+                  {/* 占免費方案上限 */}
+                  <div className="mt-4">
+                    <div className="flex items-baseline justify-between text-sm">
+                      <span className="text-ink-soft">
+                        共 <strong className="text-ink">{u.totalRows}</strong> 筆資料 · 估算{" "}
+                        <strong className="text-ink">{fmtBytes(u.totalBytes)}</strong>
+                      </span>
+                      <span className="text-ink-muted">
+                        占免費上限 {fmtBytes(u.freeLimitBytes)} 的 <strong className="text-ink">{pctText}</strong>
+                      </span>
+                    </div>
+                    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-ink/5">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-gold-500"
+                        style={{ width: `${Math.min(100, Math.max(pct, 0.5))}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-ink-muted">
+                      估算值以 JSON 位元組計算，非資料庫實際佔用（含索引），僅供掌握規模與趨勢。
+                    </p>
+                  </div>
+
+                  {/* 各資料表筆數 */}
+                  <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {u.tables.map((t) => (
+                      <div key={t.key} className="rounded-2xl bg-white/50 p-3">
+                        <div className="text-[11px] text-ink-muted">{t.label}</div>
+                        <div className="mt-0.5 text-lg font-bold text-ink">{t.rows}</div>
+                        <div className="text-[10px] text-ink-muted">{fmtBytes(t.bytes)}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 最後活動 / 暫停風險 */}
+                  <div className="mt-4 rounded-2xl bg-white/50 p-4 text-sm">
+                    {u.lastActivity ? (
+                      <p className="text-ink-soft">
+                        最近一次資料異動：
+                        <strong className="text-ink">{u.lastActivity.slice(0, 10)}</strong>
+                        （{daysIdle} 天前）。
+                        {u.supabase &&
+                          (daysIdle !== null && daysIdle >= 5
+                            ? "⚠️ 已接近「7 天無活動」門檻，免費方案可能被暫停——請提醒會員登入使用。"
+                            : "免費方案在 7 天無任何活動時可能被暫停；目前活躍中，無須擔心。")}
+                      </p>
+                    ) : (
+                      <p className="text-ink-muted">尚無資料異動紀錄。</p>
+                    )}
+                  </div>
+                </section>
+              );
+            })()}
 
             {/* 圖表列 1：排行 */}
             <section className="stagger grid gap-5 lg:grid-cols-2">
