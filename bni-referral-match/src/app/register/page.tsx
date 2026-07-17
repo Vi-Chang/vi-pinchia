@@ -8,7 +8,7 @@ import { SiteFooter } from "@/components/ui/SiteFooter";
 
 const INDUSTRIES = [
   "醫療健康", "室內設計", "房地產", "會計財稅", "法律服務", "行銷廣告",
-  "網頁/軟體開發", "餐飲食品", "印刷包裝", "保險理財", "人力資源", "電商零售", "建築營造", "其他",
+  "網頁/軟體開發", "餐飲食品", "印刷包裝", "金融保險", "金融投資", "人力資源", "電商零售", "建築營造", "其他",
 ];
 
 export default function RegisterPage() {

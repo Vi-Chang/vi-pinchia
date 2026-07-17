@@ -131,7 +131,7 @@ function seedVersions(members: Member[]): CardVersion[] {
       answers: {
         ...structuredClone(m1.answers),
         s2_dream_case: "牙科診所的植牙設備與耗材整合採購案。",
-        s4_target_industries: ["醫療健康", "保險理財"],
+        s4_target_industries: ["醫療健康", "金融保險"],
       },
       status: "completed",
       createdAt: "2026-01-15T08:00:00Z",

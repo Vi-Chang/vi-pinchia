@@ -137,6 +137,28 @@ export function NetworkGraph({
 
   return (
     <div className="space-y-3">
+      {/* 使用說明（圖例）：置於圖片上方 */}
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl bg-white/50 px-4 py-3 text-xs text-ink-soft">
+        <span className="font-semibold text-ink">使用說明</span>
+        {Object.values(EDGE_STYLE).map((s) => (
+          <span key={s.label} className="inline-flex items-center gap-1.5">
+            <svg width="24" height="6">
+              <line
+                x1="0"
+                y1="3"
+                x2="24"
+                y2="3"
+                stroke={s.color}
+                strokeWidth={s.width}
+                strokeDasharray={s.dash}
+              />
+            </svg>
+            {s.label}
+          </span>
+        ))}
+        <span className="text-ink-muted">每位會員是一個節點，點擊節點可查看互動明細</span>
+      </div>
+
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full rounded-card"
@@ -205,26 +227,6 @@ export function NetworkGraph({
         })}
       </svg>
 
-      {/* 圖例 */}
-      <div className="flex flex-wrap items-center gap-4 px-2 text-xs text-ink-soft">
-        {Object.values(EDGE_STYLE).map((s) => (
-          <span key={s.label} className="inline-flex items-center gap-1.5">
-            <svg width="24" height="6">
-              <line
-                x1="0"
-                y1="3"
-                x2="24"
-                y2="3"
-                stroke={s.color}
-                strokeWidth={s.width}
-                strokeDasharray={s.dash}
-              />
-            </svg>
-            {s.label}
-          </span>
-        ))}
-        <span className="text-ink-muted">點擊節點查看會員互動明細</span>
-      </div>
     </div>
   );
 }

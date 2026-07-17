@@ -43,6 +43,35 @@ export default function NetworkPage() {
 
   const nameOf = (id: string) => members.find((m) => m.id === id)?.name ?? id;
 
+  // AI 提案建議：橋接路徑（透過認識的人接觸陌生會員）＋ 尚未 121 名單
+  const proposals = useMemo(() => {
+    if (!member || members.length === 0) return { bridges: [] as { via: Member; target: Member; rel: string }[], strangers: [] as Member[] };
+    const myId = member.id;
+    const others = members.filter((m) => m.id !== myId);
+    const linkOf = (x: string, y: string) =>
+      interactions.find((i) => (i.fromId === x && i.toId === y) || (i.fromId === y && i.toId === x));
+    const knownIds = new Set(others.filter((o) => linkOf(myId, o.id)).map((o) => o.id));
+    const my121 = new Set(
+      interactions
+        .filter((i) => i.type === "121" && (i.fromId === myId || i.toId === myId))
+        .flatMap((i) => [i.fromId, i.toId])
+    );
+    const strangers = others.filter((o) => !my121.has(o.id));
+    const bridges: { via: Member; target: Member; rel: string }[] = [];
+    for (const target of others) {
+      if (knownIds.has(target.id)) continue;
+      for (const via of others) {
+        if (via.id === target.id || !knownIds.has(via.id)) continue;
+        const link = linkOf(via.id, target.id);
+        if (link) {
+          bridges.push({ via, target, rel: edgeStyle(link.type).label });
+          break;
+        }
+      }
+    }
+    return { bridges: bridges.slice(0, 4), strangers };
+  }, [member, members, interactions]);
+
   if (!member) return <AppShell><div /></AppShell>;
 
   const flash = (msg: string) => {
@@ -92,15 +121,6 @@ export default function NetworkPage() {
             每位會員是一個節點，線條代表 121、引薦、合作與可能產生合作。
             <strong className="text-ink">點擊節點</strong>即可查看明細，並記錄你與該會員的關係。
           </p>
-          {/* 圖例 */}
-          <div className="mt-3 flex flex-wrap gap-3 text-xs">
-            {(["121", "referral", "cooperation", "potential"] as InteractionType[]).map((t) => (
-              <span key={t} className="inline-flex items-center gap-1.5 text-ink-soft">
-                <span className="inline-block h-2.5 w-5 rounded-full" style={{ background: EDGE_STYLE[t].color }} />
-                {EDGE_STYLE[t].label}
-              </span>
-            ))}
-          </div>
         </div>
 
         {notice && (
@@ -236,6 +256,45 @@ export default function NetworkPage() {
             )}
           </div>
         </div>
+
+        {/* AI 提案建議 */}
+        <section className="glass animate-fade-up p-6">
+          <h2 className="font-bold text-ink">🤖 AI 提案建議</h2>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            根據目前的關係網絡，為你找出最短的提案路徑與還沒認識的夥伴。
+          </p>
+          <ul className="mt-4 space-y-2.5 text-sm leading-6 text-ink-soft">
+            {proposals.bridges.map((b) => (
+              <li key={b.target.id} className="flex items-start gap-2 rounded-2xl bg-white/50 p-3">
+                <span>💡</span>
+                <span>
+                  <strong className="text-ink">{b.via.name}</strong> 和{" "}
+                  <strong className="text-ink">{b.target.name}</strong> 是「{b.rel}」關係——
+                  如果你想跟 {b.target.name} 提案，可以先跟 {b.via.name} 做一次
+                  121，請他幫你引薦。
+                </span>
+              </li>
+            ))}
+            {proposals.strangers.length > 0 && (
+              <li className="flex items-start gap-2 rounded-2xl bg-white/50 p-3">
+                <span>🌱</span>
+                <span>
+                  您尚未和{" "}
+                  <strong className="text-ink">
+                    {proposals.strangers.slice(0, 6).map((s) => s.name).join("、")}
+                  </strong>
+                  {proposals.strangers.length > 6 && ` 等 ${proposals.strangers.length} 位會員`}
+                  做過 121，可以先認識彼此，累積網絡裡的信任連結。
+                </span>
+              </li>
+            )}
+            {proposals.bridges.length === 0 && proposals.strangers.length === 0 && (
+              <li className="rounded-2xl bg-white/50 p-3">
+                你已經和所有會員都建立過 121，網絡經營得非常好！🎉
+              </li>
+            )}
+          </ul>
+        </section>
       </div>
     </AppShell>
   );

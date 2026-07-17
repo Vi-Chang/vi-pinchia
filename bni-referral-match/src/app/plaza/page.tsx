@@ -4,10 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { AppShell } from "@/components/nav/AppShell";
 import { Avatar } from "@/components/ui/Avatar";
-import type { Member, MatchResult, Opportunity } from "@/lib/types";
+import type { Member, Opportunity } from "@/lib/types";
 
 type Opp = Opportunity & { member: Member };
-type Rec = MatchResult & { target: Member; dismissed121?: boolean };
 
 const TYPES = ["轉介客戶", "資源共享", "異業活動", "專業諮詢", "優惠方案", "其他"];
 const FAV_KEY = "brm-plaza-favs";
@@ -19,7 +18,6 @@ function fmt(iso: string): string {
 export default function PlazaPage() {
   const { member } = useAuth();
   const [opps, setOpps] = useState<Opp[]>([]);
-  const [recs, setRecs] = useState<Rec[]>([]);
   const [q, setQ] = useState("");
   const [typeF, setTypeF] = useState("全部類型");
   const [chapterF, setChapterF] = useState("全部分會");
@@ -42,28 +40,6 @@ export default function PlazaPage() {
       setFavs(JSON.parse(localStorage.getItem(FAV_KEY) ?? "[]"));
     } catch {}
   }, [load]);
-
-  const loadRecs = useCallback(() => {
-    if (!member) return;
-    // AI 推薦（本地規則引擎，零 API 成本）；已完成 121 者不再推薦
-    fetch(`/api/matches?memberId=${member.id}`)
-      .then((r) => r.json())
-      .then((d) => setRecs((d.matches ?? []).filter((m: Rec) => !m.dismissed121).slice(0, 3)));
-  }, [member]);
-
-  useEffect(() => {
-    loadRecs();
-  }, [loadRecs]);
-
-  const markDone = async (targetId: string) => {
-    if (!member) return;
-    await fetch("/api/interactions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ memberId: member.id, targetId, kind: "121" }),
-    });
-    loadRecs();
-  };
 
   const chapters = useMemo(
     () => ["全部分會", ...Array.from(new Set(opps.map((o) => o.member.chapter).filter(Boolean)))],
@@ -245,41 +221,6 @@ export default function PlazaPage() {
             <div className="flex gap-3 border-t border-ink/5 pt-4">
               <button onClick={save} className="btn-primary">發布</button>
               <button onClick={() => setDraft(null)} className="btn-ghost">取消</button>
-            </div>
-          </div>
-        )}
-
-        {/* AI 推薦 */}
-        {!mine && recs.length > 0 && (
-          <div className="glass animate-fade-up p-6">
-            <h2 className="font-bold text-ink">🤖 AI 為你推薦的合作夥伴</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              {recs.map((r) => (
-                <div key={r.targetId} className="rounded-2xl bg-white/50 p-4">
-                  <div className="flex items-center gap-2">
-                    <Avatar name={r.target.name} color={r.target.color} size={34} />
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-bold text-ink">
-                        {r.target.name}
-                        {r.target.isDemo && <span className="ml-1 text-[10px] font-normal text-amber-600">（範例）</span>}
-                      </div>
-                      <div className="truncate text-[11px] text-ink-muted">{r.target.industry}</div>
-                    </div>
-                    <span className="ml-auto text-sm font-bold text-bni-red">{r.probability}%</span>
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-xs leading-5 text-ink-soft">{r.reasons[0]}</p>
-                  <div className="mt-2 flex gap-2">
-                    <a href={`/partner/${r.targetId}`} className="chip !py-1 !text-[11px]">看商機卡</a>
-                    <button
-                      onClick={() => markDone(r.targetId)}
-                      className="chip !py-1 !text-[11px]"
-                      title="記錄一次 121，之後不再推薦此夥伴，直到他更新交流卡或商機"
-                    >
-                      ✓ 已完成 121
-                    </button>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
