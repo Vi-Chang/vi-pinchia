@@ -39,7 +39,11 @@ export default function DashboardPage() {
   // 已完成 121（暫不推薦）的夥伴不出現在推薦區
   const recs = matches.filter((m) => !m.dismissed121);
   const goodMatches = recs.filter((m) => m.score >= 45);
-  const today = recs[0];
+
+  // 「下一位」：跳過當前推薦，輪流瀏覽其他推薦夥伴
+  const [recIdx, setRecIdx] = useState(0);
+  const today = recs.length > 0 ? recs[recIdx % recs.length] : undefined;
+  const nextRec = () => setRecIdx((i) => i + 1);
 
   const markDone = async (targetId: string) => {
     if (!member) return;
@@ -93,6 +97,11 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <span className="tag-red">AI 今日推薦</span>
               <span className="text-xs text-ink-muted">今天最適合 121 的人</span>
+              {progress >= 80 && recs.length > 1 && (
+                <span className="ml-auto text-xs text-ink-muted">
+                  第 {(recIdx % recs.length) + 1} / {recs.length} 位
+                </span>
+              )}
             </div>
 
             {progress < 80 ? (
@@ -131,7 +140,16 @@ export default function DashboardPage() {
                   ))}
                 </ul>
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <Link href="/matches" className="btn-gold">查看完整配對</Link>
+                  {recs.length > 1 && (
+                    <button
+                      onClick={nextRec}
+                      className="btn-gold"
+                      title="跳過這位，看下一位 AI 推薦的 121 夥伴"
+                    >
+                      下一位 →
+                    </button>
+                  )}
+                  <Link href="/matches" className="btn-ghost">查看完整配對</Link>
                   <Link href="/analysis" className="btn-ghost">AI 深度分析</Link>
                   <button
                     onClick={() => markDone(today.targetId)}
